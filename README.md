@@ -1,16 +1,16 @@
 # Portfolio Manager - Team 02 🚀
 
-A hackathon-style portfolio management system built with Flask backend, Next.js frontend, and Python analytics. This project enables users to manage investment portfolios, execute trades, and analyze performance with real-time data visualization.
+A hackathon-style portfolio management system built with a Flask backend, React frontend, and Python analytics. This project enables users to manage investment portfolios, execute trades, and analyze performance with real-time data visualization.
 
 ## 🎯 Project Overview
 
 This portfolio management application allows users to:
 
-- Track and manage investment portfolios with $1,000 starting seed money
-- Execute buy/sell orders for stocks and securities
-- View real-time portfolio performance and analytics
-- Analyze portfolio trends with Python-powered data science
-- Generate insights and performance reports
+- Track and manage investment portfolios with $1,000 starting seed money  
+- Execute buy/sell orders for stocks and securities  
+- View real-time portfolio performance and analytics  
+- Analyze portfolio trends with Python-powered data science  
+- Generate insights and performance reports  
 
 **Starting Seed Money**: Users begin with $1,000 in virtual currency for trading simulation.
 
@@ -18,34 +18,34 @@ This portfolio management application allows users to:
 
 Hackathon-focused architecture emphasizing rapid development and core functionality:
 
-### Frontend (Next.js)
+### Frontend (React)
 
-- **Technology**: Next.js 14+ with JavaScript (keeping it simple)
-- **Styling**: Tailwind CSS for rapid UI development
-- **State Management**: React built-in state (useState, useContext)
-- **API Communication**: Fetch API for REST calls
-- **Charts**: Chart.js for portfolio visualizations
+- **Technology**: React 18+ with JavaScript (keeping it simple)  
+- **Styling**: Tailwind CSS for rapid UI development  
+- **State Management**: React built-in state (`useState`, `useContext`)  
+- **API Communication**: Fetch API for REST calls  
+- **Charts**: Chart.js for portfolio visualizations  
 
 ### Backend (Flask)
 
-- **Technology**: Python 3.9+ with Flask
-- **Framework**: Flask (Flask-SQLAlchemy, Flask-CORS)
-- **Database**: MySQL for data persistence
-- **Authentication**: Single user
-- **API**: RESTful endpoints returning JSON
+- **Technology**: Python 3.9+ with Flask  
+- **Framework**: Flask (Flask-SQLAlchemy, Flask-CORS)  
+- **Database**: MySQL for data persistence  
+- **Authentication**: Single user  
+- **API**: RESTful endpoints returning JSON  
 
 ### Analytics Engine (Python)
 
-- **Technology**: Integrated within Flask backend
-- **Libraries**: Pandas, NumPy, Matplotlib, Plotly
-- **Purpose**: Portfolio analysis, risk assessment, trend calculation
-- **Integration**: Direct function calls within Flask routes
+- **Technology**: Integrated within Flask backend  
+- **Libraries**: Pandas, NumPy, Matplotlib, Plotly  
+- **Purpose**: Portfolio analysis, risk assessment, trend calculation  
+- **Integration**: Direct function calls within Flask routes  
 
 ### Communication
 
-- **Frontend ↔ Backend**: REST API calls (JSON)
-- **Analytics**: Integrated Python functions within Flask backend
-- **Database**: MySQL with SQLAlchemy ORM
+- **Frontend ↔ Backend**: REST API calls (JSON)  
+- **Analytics**: Integrated Python functions within Flask backend  
+- **Database**: MySQL with SQLAlchemy ORM  
 
 ## 📅 3-Day Sprint Plan
 
@@ -55,19 +55,19 @@ Hackathon-focused architecture emphasizing rapid development and core functional
 
 #### Morning (4 hours)
 
-- [x] Project setup and repository structure
-- [ ] Flask project initialization with virtual environment
-- [ ] MySQL database setup and connection
-- [ ] Basic data models (User, Portfolio, Stock, Transaction)
-- [ ] Database schema creation with SQLAlchemy
+- [x] Project setup and repository structure  
+- [ ] Flask project initialization with virtual environment  
+- [ ] MySQL database setup and connection  
+- [ ] Basic data models (User, Portfolio, Stock, Transaction)  
+- [ ] Database schema creation with SQLAlchemy  
 
 #### Afternoon (4 hours)
 
-- [ ] Core Flask routes for user management
-- [ ] Portfolio CRUD operations
-- [ ] Basic authentication (session-based)
-- [ ] Stock data integration (mock or free API)
-- [ ] Basic error handling and validation
+- [ ] Core Flask routes for user management  
+- [ ] Portfolio CRUD operations  
+- [ ] Basic authentication (session-based)  
+- [ ] Stock data integration (mock or free API)  
+- [ ] Basic error handling and validation  
 
 ### Day 2: Frontend Development & API Integration
 
@@ -75,19 +75,19 @@ Hackathon-focused architecture emphasizing rapid development and core functional
 
 #### Morning (4 hours)
 
-- [ ] Next.js project setup (JavaScript, no TypeScript for speed)
-- [ ] Login/Register pages with simple forms
-- [ ] Dashboard layout with navigation
-- [ ] Portfolio overview component
-- [ ] API service functions using fetch
+- [ ] React project setup (JavaScript, no TypeScript for speed)  
+- [ ] Login/Register pages with simple forms  
+- [ ] Dashboard layout with navigation  
+- [ ] Portfolio overview component  
+- [ ] API service functions using fetch  
 
 #### Afternoon (4 hours)
 
-- [ ] Trading interface (buy/sell forms)
-- [ ] Transaction history display
-- [ ] Basic portfolio charts with Chart.js
-- [ ] Responsive design with Tailwind CSS
-- [ ] Frontend-backend integration and testing
+- [ ] Trading interface (buy/sell forms)  
+- [ ] Transaction history display  
+- [ ] Basic portfolio charts with Chart.js  
+- [ ] Responsive design with Tailwind CSS  
+- [ ] Frontend-backend integration and testing  
 
 ### Day 3: Python Analytics & Polish
 
@@ -95,25 +95,25 @@ Hackathon-focused architecture emphasizing rapid development and core functional
 
 #### Morning (4 hours)
 
-- [ ] Portfolio analytics functions within Flask
-- [ ] Risk assessment calculations (Sharpe ratio, volatility)
-- [ ] Performance metrics (returns, profit/loss)
-- [ ] Data visualization endpoints (charts data)
-- [ ] Portfolio optimization suggestions
+- [ ] Portfolio analytics functions within Flask  
+- [ ] Risk assessment calculations (Sharpe ratio, volatility)  
+- [ ] Performance metrics (returns, profit/loss)  
+- [ ] Data visualization endpoints (charts data)  
+- [ ] Portfolio optimization suggestions  
 
 #### Afternoon (4 hours)
 
-- [ ] Analytics dashboard in frontend
-- [ ] Advanced charts and visualizations
-- [ ] Portfolio insights and recommendations
-- [ ] Final testing and bug fixes
-- [ ] Demo preparation and documentation
+- [ ] Analytics dashboard in frontend  
+- [ ] Advanced charts and visualizations  
+- [ ] Portfolio insights and recommendations  
+- [ ] Final testing and bug fixes  
+- [ ] Demo preparation and documentation  
 
 ## 🛠️ Technology Stack
 
 ### Backend (Flask)
 
-```
+```bash
 - Python 3.9+
 - Flask
 - Flask-SQLAlchemy
@@ -123,32 +123,25 @@ Hackathon-focused architecture emphasizing rapid development and core functional
 - NumPy
 - Matplotlib/Plotly
 - Requests (for market data)
-```
 
-### Frontend (Next.js)
+Frontend (React)
 
-```
-- Next.js 14+
-- JavaScript (ES6+)
 - React 18+
+- JavaScript (ES6+)
 - Tailwind CSS
 - Chart.js
 - Fetch API
-```
 
-### Analytics (Integrated Python)
+Analytics (Integrated Python)
 
-```
 - Pandas for data manipulation
 - NumPy for calculations
 - Matplotlib/Plotly for visualizations
 - Scikit-learn for portfolio optimization
 - yfinance for stock data (optional)
-```
 
-## 📁 Project Structure
+📁 Project Structure
 
-```
 portfolio_manager_team02/
 ├── README.md
 ├── backend/                 # Flask Backend
@@ -173,13 +166,12 @@ portfolio_manager_team02/
 │   ├── config.py
 │   ├── requirements.txt
 │   └── database_init.py
-├── frontend/               # Next.js Frontend
+├── frontend/               # React Frontend
 │   ├── src/
-│   │   ├── app/
-│   │   │   ├── page.js
-│   │   │   ├── login/
-│   │   │   ├── dashboard/
-│   │   │   └── layout.js
+│   │   ├── pages/
+│   │   │   ├── Login.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   └── Home.jsx
 │   │   ├── components/
 │   │   │   ├── Portfolio/
 │   │   │   ├── Trading/
@@ -195,110 +187,117 @@ portfolio_manager_team02/
 └── docs/
     ├── setup_guide.md
     └── api_documentation.md
-```
 
-## 🔧 Core Features
+🔧 Core Features
+User Management
 
-### User Management
+    User registration and authentication
 
-- User registration and authentication
-- Profile management
-- Portfolio initialization with $1,000 seed money
+    Profile management
 
-### Portfolio Management
+    Portfolio initialization with $1,000 seed money
 
-- Create and manage multiple portfolios
-- Real-time portfolio valuation
-- Asset allocation tracking
-- Performance metrics
+Portfolio Management
 
-### Trading System
+    Create and manage multiple portfolios
 
-- Buy/sell stock orders
-- Order history and tracking
-- Market data integration
-- Transaction fees calculation
+    Real-time portfolio valuation
 
-### Analytics & Reporting
+    Asset allocation tracking
 
-- Portfolio performance analysis
-- Risk assessment metrics
-- Trend analysis and predictions
-- Custom reports generation
+    Performance metrics
 
-## 🚀 API Endpoints
+Trading System
 
-### Portfolio Management
+    Buy/sell stock orders
 
-```
+    Order history and tracking
+
+    Market data integration
+
+    Transaction fees calculation
+
+Analytics & Reporting
+
+    Portfolio performance analysis
+
+    Risk assessment metrics
+
+    Trend analysis and predictions
+
+    Custom reports generation
+
+🚀 API Endpoints
+Portfolio Management
+
 GET    /api/portfolios
 POST   /api/portfolios
 GET    /api/portfolios/{id}
 PUT    /api/portfolios/{id}
 DELETE /api/portfolios/{id}
-```
 
-### Trading
+Trading
 
-```
 POST /api/trades/buy
 POST /api/trades/sell
 GET  /api/trades/history
 GET  /api/market/stocks
 GET  /api/market/stocks/{symbol}
-```
 
-### Analytics (Python Service)
+Analytics (Python Service)
 
-```
 GET  /analytics/portfolio/{id}/performance
 GET  /analytics/portfolio/{id}/risk
 POST /analytics/portfolio/optimize
 GET  /analytics/market/trends
-```
 
-## � Core Hackathon Features
+🧩 Core Hackathon Features
+MVP (Minimum Viable Product)
 
-### MVP (Minimum Viable Product)
+    User Authentication: Simple login/register system
 
-- **User Authentication**: Simple login/register system
-- **Portfolio Dashboard**: Overview of holdings and performance
-- **Trading System**: Buy/sell stocks with $1,000 seed money
-- **Analytics**: Basic portfolio metrics and visualizations
-- **Transaction History**: Record and display all trades
+    Portfolio Dashboard: Overview of holdings and performance
 
-### Enhanced Features (If Time Permits)
+    Trading System: Buy/sell stocks with $1,000 seed money
 
-- **Advanced Analytics**: Sharpe ratio, volatility calculations
-- **Portfolio Optimization**: Python-powered suggestions
-- **Market Data Integration**: Real stock prices
-- **Interactive Charts**: Detailed portfolio performance graphs
-- **Risk Assessment**: Portfolio risk analysis
+    Analytics: Basic portfolio metrics and visualizations
 
-## 🔐 Simple Security
+    Transaction History: Record and display all trades
 
-- Session-based authentication (no JWT complexity)
-- Basic input validation
-- SQL injection prevention via SQLAlchemy
-- CORS setup for frontend-backend communication
+Enhanced Features (If Time Permits)
 
-## 📊 Database Schema (MySQL)
+    Advanced Analytics: Sharpe ratio, volatility calculations
 
-### Core Tables
+    Portfolio Optimization: Python-powered suggestions
 
-```sql
-Users: id, username, email, password_hash, cash_balance, created_at
-Portfolios: id, user_id, name, total_value, created_at
-Stocks: id, symbol, name, current_price, last_updated
-Transactions: id, user_id, stock_id, type, quantity, price, total_amount, timestamp
-Holdings: id, user_id, stock_id, quantity, avg_purchase_price
-```
+    Market Data Integration: Real stock prices
 
-## � Quick Start (Development)
+    Interactive Charts: Detailed portfolio performance graphs
 
-### Backend Setup
+    Risk Assessment: Portfolio risk analysis
 
-```bash
+🔐 Simple Security
+
+    Session-based authentication (no JWT complexity)
+
+    Basic input validation
+
+    SQL injection prevention via SQLAlchemy
+
+    CORS setup for frontend-backend communication
+
+📊 Database Schema (MySQL)
+Core Tables
+
+Users: id, username, email, password_hash, cash_balance, created_at  
+Portfolios: id, user_id, name, total_value, created_at  
+Stocks: id, symbol, name, current_price, last_updated  
+Transactions: id, user_id, stock_id, type, quantity, price, total_amount, timestamp  
+Holdings: id, user_id, stock_id, quantity, avg_purchase_price  
+
+⚙️ Quick Start (Development)
+Backend Setup
+
 # Create virtual environment
 cd backend
 python -m venv venv
@@ -313,94 +312,111 @@ CREATE DATABASE portfolio_manager;
 
 # Run Flask app
 python app.py
-```
 
-### Frontend Setup
+Frontend Setup
 
-```bash
 # Install dependencies
 cd frontend
 npm install
 
 # Start development server
-npm run dev
-```
+npm start
 
-## 📈 Analytics Features
+📈 Analytics Features
+Portfolio Performance
 
-### Portfolio Performance
+    Total return calculation
 
-- Total return calculation
-- Daily/weekly/monthly performance
-- Asset allocation pie charts
-- Performance vs market benchmark
+    Daily/weekly/monthly performance
 
-### Risk Analysis
+    Asset allocation pie charts
 
-- Portfolio volatility
-- Sharpe ratio calculation
-- Diversification metrics
-- Risk-return scatter plots
+    Performance vs market benchmark
 
-### Data Visualization
+Risk Analysis
 
-- Interactive charts with Chart.js
-- Portfolio composition graphs
-- Performance trend lines
-- Trading volume analysis
+    Portfolio volatility
 
-## � Implementation Notes
+    Sharpe ratio calculation
 
-### Market Data
+    Diversification metrics
 
-- Use mock data or free APIs (Alpha Vantage, Yahoo Finance)
-- Focus on core functionality over real-time data
-- Implement basic stock price simulation for demo
+    Risk-return scatter plots
 
-### Python Analytics Integration
+Data Visualization
 
-- Keep analytics functions within Flask app for simplicity
-- Use Pandas for data manipulation and analysis
-- Generate charts server-side and send data to frontend
+    Interactive charts with Chart.js
 
-### Frontend Simplicity
+    Portfolio composition graphs
 
-- Use React hooks (useState, useEffect) for state management
-- Implement simple routing with Next.js app directory
-- Focus on functionality over complex UI animations
+    Performance trend lines
 
-## 🎯 Success Metrics
+    Trading volume analysis
 
-### Day 1 Success
+🧠 Implementation Notes
+Market Data
 
-- ✅ Flask app running with database connection
-- ✅ Basic user working
-- ✅ Core models and database schema created
+    Use mock data or free APIs (Alpha Vantage, Yahoo Finance)
 
-### Day 2 Success
+    Focus on core functionality over real-time data
 
-- ✅ Frontend connected to backend APIs
-- ✅ Users can buy/sell stocks
-- ✅ Portfolio dashboard showing current holdings
+    Implement basic stock price simulation for demo
 
-### Day 3 Success
+Python Analytics Integration
 
-- ✅ Analytics dashboard with charts
-- ✅ Portfolio performance calculations
-- ✅ Demo-ready application
+    Keep analytics functions within Flask app for simplicity
 
-## 🔮 Bonus Features (If Time Allows)
+    Use Pandas for data manipulation and analysis
 
-- **Portfolio Rebalancing**: Suggest optimal allocation
-- **Watchlist**: Track stocks without buying
-- **News Integration**: Basic market news display
-- **Export Features**: Download portfolio reports
-- **Paper Trading Competition**: Compare team member portfolios
+    Generate charts server-side and send data to frontend
 
----
+Frontend Simplicity
 
-**Project Timeline**: 3 Days (Hackathon Style)  
-**Team**: Team 02  
-**Tech Stack**: Flask + Next.js + Python Analytics  
-**Database**: MySQL  
-**Focus**: MVP with strong analytics component
+    Use React hooks (useState, useEffect) for state management
+
+    Implement simple routing with React Router
+
+    Focus on functionality over complex UI animations
+
+🎯 Success Metrics
+Day 1 Success
+
+    ✅ Flask app running with database connection
+
+    ✅ Basic user working
+
+    ✅ Core models and database schema created
+
+Day 2 Success
+
+    ✅ Frontend connected to backend APIs
+
+    ✅ Users can buy/sell stocks
+
+    ✅ Portfolio dashboard showing current holdings
+
+Day 3 Success
+
+    ✅ Analytics dashboard with charts
+
+    ✅ Portfolio performance calculations
+
+    ✅ Demo-ready application
+
+🔮 Bonus Features (If Time Allows)
+
+    Portfolio Rebalancing: Suggest optimal allocation
+
+    Watchlist: Track stocks without buying
+
+    News Integration: Basic market news display
+
+    Export Features: Download portfolio reports
+
+    Paper Trading Competition: Compare team member portfolios
+
+Project Timeline: 3 Days (Hackathon Style)
+Team: Team 02
+Tech Stack: Flask + React + Python Analytics
+Database: MySQL
+Focus: MVP with strong analytics component
