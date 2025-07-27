@@ -6,7 +6,7 @@ A hackathon-style portfolio management system built with a Flask backend, React 
 
 This portfolio management application allows users to:
 
-- Track and manage investment portfolios with $1,000 starting seed money  
+- Track and manage an investment portfolio with $1,000 starting seed money  
 - Execute buy/sell orders for stocks and securities  
 - View real-time portfolio performance and analytics  
 - Analyze portfolio trends with Python-powered data science  
