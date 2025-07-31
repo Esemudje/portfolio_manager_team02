@@ -1,6 +1,66 @@
 # Portfolio Manager
 
-A hackathon project to simulate stock trading and portfolio tracking.
+A hackathon project to simulate stock## Getting Started
+
+### Quick Start with Docker (Coming Soon)
+```bash
+# Clone the repository
+git clone https://github.com/your‑team/portfolio‑manager.git
+cd portfolio‑manager
+
+# Start everything (backend, frontend, and database)
+docker compose up
+```
+
+### Manual Setup
+
+#### Backend Setup
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+
+2. Create a virtual environment and install dependencies:
+   ```bash
+   python -m venv venv
+   venv\Scripts\activate  # On Windows
+   # source venv/bin/activate  # On macOS/Linux
+   pip install -r ../requirements.txt
+   ```
+
+3. Set up environment variables (create `.env` file):
+   ```
+   ALPHA_VANTAGE_KEY=your_api_key_here
+   MYSQL_HOST=localhost
+   MYSQL_USER=root
+   MYSQL_PASSWORD=your_password
+   MYSQL_DB=portfolio
+   ```
+
+4. Start the Flask server:
+   ```bash
+   python run.py
+   ```
+
+#### Frontend Setup
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npm start
+   ```
+
+4. Open `http://localhost:3000` in your browser
+
+The frontend will automatically proxy API requests to the Flask backend running on port 5000. portfolio tracking.
 
 ## What We’re Building
 

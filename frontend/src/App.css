@@ -1,0 +1,151 @@
+.App {
+  min-height: 100vh;
+}
+
+/* Additional component-specific styles */
+.main-content {
+  padding: 2rem 0;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: #1e293b;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #374151;
+}
+
+/* Chart container */
+.chart-container {
+  height: 400px;
+  margin: 1rem 0;
+}
+
+/* Stock list */
+.stock-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.stock-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: white;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.stock-item:hover {
+  border-color: #667eea;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stock-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stock-symbol {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1e293b;
+}
+
+.stock-name {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.stock-price {
+  text-align: right;
+}
+
+.stock-current-price {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.stock-change {
+  font-size: 0.875rem;
+}
+
+/* Trade form */
+.trade-form {
+  background: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.quantity-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quantity-input input {
+  flex: 1;
+}
+
+.trade-summary {
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.trade-summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.trade-summary-row.total {
+  font-weight: 700;
+  font-size: 1.1rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.5rem;
+}
+
+/* Holdings table */
+.holdings-table {
+  overflow-x: auto;
+}
+
+.holdings-table table {
+  min-width: 600px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .stock-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .stock-price {
+    text-align: left;
+    width: 100%;
+  }
+}
