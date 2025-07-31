@@ -1,9 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import Dashboard from './components/Dashboard';
-import Portfolio from './components/Portfolio';
-import Trading from './components/Trading';
-import StockDetail from './components/StockDetail';
+import Dashboard from './components/Dashboard.jsx';
+import Portfolio from './components/Portfolio.jsx';
+import Trading from './components/Trading.jsx';
+import StockDetail from './components/StockDetail.jsx';
 import './App.css';
 
 function Navigation() {
