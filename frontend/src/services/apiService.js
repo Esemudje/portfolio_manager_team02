@@ -93,37 +93,59 @@ const apiService = {
     return api.get(`/stocks/${symbol}/earnings`);
   },
 
-  // Portfolio and trading functions (these would connect to your backend database)
-  // For now, these are placeholder functions that would need to be implemented
+  // Portfolio Management Functions - Connected to MySQL Database
   
-  getPortfolio: async () => {
-    // This would get portfolio data from your MySQL database
-    // return api.get('/portfolio');
-    throw new Error('Portfolio API not yet implemented');
+  // Get complete portfolio summary with holdings and P&L
+  getPortfolio: async (symbol = null) => {
+    const params = symbol ? { symbol } : {};
+    return api.get('/portfolio', { params });
   },
 
-  getHoldings: async () => {
-    // This would get current holdings from your MySQL database
-    // return api.get('/holdings');
-    throw new Error('Holdings API not yet implemented');
+  // Get trade history
+  getTrades: async (symbol = null, limit = 50) => {
+    const params = { limit };
+    if (symbol) params.symbol = symbol;
+    return api.get('/portfolio/trades', { params });
   },
 
-  getTrades: async () => {
-    // This would get trade history from your MySQL database
-    // return api.get('/trades');
-    throw new Error('Trades API not yet implemented');
+  // Get current cash balance
+  getBalance: async (userId = 'default_user') => {
+    return api.get('/portfolio/cash', { 
+      params: { user_id: userId } 
+    });
   },
 
-  executeTrade: async (tradeData) => {
-    // This would execute a trade and update your MySQL database
-    // return api.post('/trades', tradeData);
-    throw new Error('Trade execution API not yet implemented');
+  // Get portfolio performance metrics
+  getPerformance: async (days = 30) => {
+    return api.get('/portfolio/performance', { 
+      params: { days } 
+    });
   },
 
-  getBalance: async () => {
-    // This would get current cash balance from your MySQL database
-    // return api.get('/balance');
-    throw new Error('Balance API not yet implemented');
+  // Trading Functions - Execute real trades
+  
+  // Execute buy order
+  buyStock: async (symbol, quantity, cash = null, userId = 'default_user') => {
+    return api.post('/trade/buy', {
+      symbol: symbol.toUpperCase(),
+      quantity: parseInt(quantity),
+      cash,
+      user_id: userId
+    });
+  },
+
+  // Execute sell order
+  sellStock: async (symbol, quantity, userId = 'default_user') => {
+    return api.post('/trade/sell', {
+      symbol: symbol.toUpperCase(),
+      quantity: parseInt(quantity),
+      user_id: userId
+    });
+  },
+
+  // Get FIFO holdings information for a symbol
+  getHoldingsInfo: async (symbol) => {
+    return api.get(`/trade/holdings/${symbol.toUpperCase()}`);
   }
 };
 

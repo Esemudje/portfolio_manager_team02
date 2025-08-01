@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, TrendingDown, DollarSign, PieChart } from 'lucide-react';
 import apiService from '../services/apiService';
 
 const Dashboard = () => {
@@ -16,16 +15,43 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Fetch quotes for watchlist stocks
+      // Fetch real portfolio data from database
+      const [portfolioResponse, cashResponse] = await Promise.allSettled([
+        apiService.getPortfolio(),
+        apiService.getBalance()
+      ]);
+
+      // Get portfolio data
+      let holdings = [];
+      let totalValue = 0;
+      let totalPL = 0;
+      
+      if (portfolioResponse.status === 'fulfilled' && portfolioResponse.value.holdings) {
+        holdings = portfolioResponse.value.holdings.map(holding => ({
+          symbol: holding.stock_symbol,
+          quantity: parseFloat(holding.quantity),
+          averageCost: parseFloat(holding.average_cost),
+          currentPrice: 0 // Will be updated with current market price
+        }));
+        
+        if (portfolioResponse.value.summary) {
+          totalValue = portfolioResponse.value.summary.total_portfolio_value || 0;
+          totalPL = portfolioResponse.value.summary.total_pnl || 0;
+        }
+      }
+
+      // Get current cash balance
+      let cashBalance = 10000; // Default fallback
+      if (cashResponse.status === 'fulfilled' && cashResponse.value.cash_balance !== undefined) {
+        cashBalance = parseFloat(cashResponse.value.cash_balance);
+      }
+
+      // Fetch current quotes for watchlist stocks
       const quotes = {};
       for (const symbol of watchlist) {
         try {
@@ -36,29 +62,33 @@ const Dashboard = () => {
         }
       }
       
+      // Update holdings with current market prices
+      for (const holding of holdings) {
+        if (quotes[holding.symbol]) {
+          holding.currentPrice = parseFloat(quotes[holding.symbol]['05. price'] || holding.averageCost);
+        }
+      }
+      
+      // Recalculate totals with current prices if we have holdings
+      if (holdings.length > 0) {
+        totalValue = holdings.reduce((sum, holding) => 
+          sum + (holding.quantity * holding.currentPrice), 0
+        );
+        
+        const totalCost = holdings.reduce((sum, holding) => 
+          sum + (holding.quantity * holding.averageCost), 0
+        );
+        
+        totalPL = totalValue - totalCost;
+      }
+      
       setStockQuotes(quotes);
-      
-      // Mock portfolio data - in a real app, this would come from your backend
-      const mockHoldings = [
-        { symbol: 'AAPL', quantity: 15, averageCost: 193.33, currentPrice: quotes.AAPL?.['05. price'] || 195.60 },
-        { symbol: 'GOOGL', quantity: 1, averageCost: 2700.00, currentPrice: quotes.GOOGL?.['05. price'] || 2742.50 },
-        { symbol: 'AMZN', quantity: 3, averageCost: 230.00, currentPrice: quotes.AMZN?.['05. price'] || 236.50 }
-      ];
-      
-      const totalValue = mockHoldings.reduce((sum, holding) => 
-        sum + (holding.quantity * parseFloat(holding.currentPrice)), 0
-      );
-      
-      const totalCost = mockHoldings.reduce((sum, holding) => 
-        sum + (holding.quantity * holding.averageCost), 0
-      );
-      
       setPortfolioData({
         totalValue,
-        totalCash: 10000,
-        totalPL: totalValue - totalCost,
-        dayChange: 150.25, // Mock day change
-        holdings: mockHoldings
+        totalCash: cashBalance,
+        totalPL,
+        dayChange: 0, // Could be calculated from daily performance
+        holdings
       });
       
     } catch (err) {
@@ -67,7 +97,11 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [watchlist]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {

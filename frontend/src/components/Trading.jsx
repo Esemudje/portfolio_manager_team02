@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, TrendingUp, TrendingDown } from 'lucide-react';
+import { Search } from 'lucide-react';
 import apiService from '../services/apiService';
 
 const Trading = () => {
@@ -10,10 +10,26 @@ const Trading = () => {
   const [stockQuote, setStockQuote] = useState(null);
   const [tradeAction, setTradeAction] = useState(searchParams.get('action') || 'buy');
   const [quantity, setQuantity] = useState(1);
-  const [availableCash] = useState(10000);
+  const [availableCash, setAvailableCash] = useState(10000);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  useEffect(() => {
+    // Fetch current cash balance
+    const fetchCashBalance = async () => {
+      try {
+        const balance = await apiService.getBalance();
+        if (balance.cash_balance !== undefined) {
+          setAvailableCash(parseFloat(balance.cash_balance));
+        }
+      } catch (err) {
+        console.warn('Failed to fetch cash balance:', err);
+      }
+    };
+    
+    fetchCashBalance();
+  }, []);
 
   // Popular stocks for quick access
   const popularStocks = [
@@ -78,18 +94,36 @@ const Trading = () => {
       setLoading(true);
       setError(null);
       
-      // In a real app, this would make an API call to your backend to execute the trade
-      // For now, we'll simulate a successful trade
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      let result;
+      if (tradeAction === 'buy') {
+        result = await apiService.buyStock(selectedStock, quantity);
+      } else {
+        result = await apiService.sellStock(selectedStock, quantity);
+      }
       
-      setSuccess(`Successfully ${tradeAction === 'buy' ? 'bought' : 'sold'} ${quantity} shares of ${selectedStock} at ${formatCurrency(price)}`);
-      setQuantity(1);
+      // Check if the result indicates success
+      if (result.message && result.message.toLowerCase().includes('successful')) {
+        setSuccess(result.message);
+        
+        // Update cash balance after successful trade
+        const updatedBalance = await apiService.getBalance();
+        if (updatedBalance.cash_balance !== undefined) {
+          setAvailableCash(parseFloat(updatedBalance.cash_balance));
+        }
+        
+        setQuantity(1);
+      } else {
+        // Handle API error response
+        setError(result.error || result.message || 'Trade execution failed');
+      }
       
-      // Reset after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
+      // Reset success message after 5 seconds
+      if (result.message && result.message.toLowerCase().includes('successful')) {
+        setTimeout(() => setSuccess(null), 5000);
+      }
       
     } catch (err) {
-      setError('Failed to execute trade');
+      setError(err.message || 'Failed to execute trade');
       console.error('Trade error:', err);
     } finally {
       setLoading(false);
