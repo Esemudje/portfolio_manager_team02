@@ -6,7 +6,7 @@ app = create_app()
 if __name__ == "__main__":
     print("Starting Portfolio Manager API Server...")
     print("="*50)
-    print("Server will be available at: http://localhost:5000")
+    print("Server will be available at: http://localhost:8084")
     print("API endpoints:")
     print("   • GET /api/stocks/<symbol> - Real-time quote")
     print("   • GET /api/stocks/<symbol>/overview - Company overview")
@@ -24,5 +24,6 @@ if __name__ == "__main__":
     else:
         print("Alpha Vantage API key configured")
 
+
     print("\nStarting Flask development server...")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=8084)
