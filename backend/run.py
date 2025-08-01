@@ -17,12 +17,16 @@ if __name__ == "__main__":
     print("   • GET /api/test-connection - Test API connection")
     print("="*50)
     
-    # Check for API key
-    if not os.getenv("ALPHA_VANTAGE_KEY"):
+    # Check for API keys
+    api_keys_str = os.getenv("ALPHA_VANTAGE_KEY")
+    if not api_keys_str:
         print("WARNING: ALPHA_VANTAGE_KEY not found in environment!")
-        print("   Please set your API key in .env file")
+        print("   Please set your API key(s) in .env file")
     else:
-        print("Alpha Vantage API key configured")
+        api_keys = [key.strip() for key in api_keys_str.split(",") if key.strip()]
+        print(f"Alpha Vantage API key(s) configured: {len(api_keys)} key(s)")
+        if len(api_keys) > 1:
+            print("   Multiple keys detected - rotation will be used on rate limits")
 
 
     print("\nStarting Flask development server...")

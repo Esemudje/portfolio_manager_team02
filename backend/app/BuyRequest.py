@@ -1,4 +1,4 @@
-class BuyRequest:
+class buyRequest:
     def __init__(self, symbol: str, quantity: int):
         self.symbol = symbol
         self.quantity = quantity

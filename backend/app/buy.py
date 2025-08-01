@@ -1,8 +1,8 @@
 import mysql.connector
 import datetime
-from .BuyRequest import BuyRequest
+from .buyRequest import buyRequest
 
-def buy_stock(buy_request: BuyRequest, database: str, cash: float) -> str:
+def buy_stock(buy_request: buyRequest, database: str, cash: float) -> str:
     db = None
 
     try:

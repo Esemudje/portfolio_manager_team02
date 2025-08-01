@@ -66,7 +66,7 @@ def main():
     print("=" * 50)
     print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-    base_url = "http://localhost:5000"
+    base_url = "http://localhost:8084"
     test_symbol = "TSLA"
     
     tests = [

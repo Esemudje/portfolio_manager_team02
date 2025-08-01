@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from .config import Config
 import os
-from .BuyRequest import BuyRequest
+from .buyRequest import buyRequest
 from .buy import buy_stock
 
 db = SQLAlchemy() # SQLAlchemy instance for database interactions
@@ -19,7 +19,12 @@ def create_app():
     @app.route("/")          # sanity check
     def health():
         print("Health check endpoint accessed")
-        api_key_status = "configured" if os.getenv("ALPHA_VANTAGE_KEY") else "missing"
+        api_keys_str = os.getenv("ALPHA_VANTAGE_KEY")
+        if api_keys_str:
+            api_keys = [key.strip() for key in api_keys_str.split(",") if key.strip()]
+            api_key_status = f"configured ({len(api_keys)} key{'s' if len(api_keys) > 1 else ''})"
+        else:
+            api_key_status = "missing"
         return {
             "status": "ok",
             "message": "Portfolio Manager API is running",
@@ -39,7 +44,7 @@ def create_app():
     def buy():
         data = request.json
         try:
-            buy_request = BuyRequest(
+            buy_request = buyRequest(
                 symbol=data["symbol"],
                 quantity=int(data["quantity"]),
             )

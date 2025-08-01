@@ -9,4 +9,7 @@ class Config:
         f"@{os.getenv('MYSQL_HOST')}/{os.getenv('MYSQL_DB')}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    ALPHA_VANTAGE_KEY = os.getenv("ALPHA_VANTAGE_KEY")
+    # Parse comma-separated API keys
+    ALPHA_VANTAGE_KEYS = [key.strip() for key in os.getenv("ALPHA_VANTAGE_KEY", "").split(",") if key.strip()]
+    # Keep single key for backward compatibility (uses first key)
+    ALPHA_VANTAGE_KEY = ALPHA_VANTAGE_KEYS[0] if ALPHA_VANTAGE_KEYS else None
