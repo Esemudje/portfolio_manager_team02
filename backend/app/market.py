@@ -1,6 +1,8 @@
 import requests
 import os
 from typing import Dict, List, Optional
+from dotenv import load_dotenv
+load_dotenv()
 
 BASE_URL = "https://www.alphavantage.co/query"
 API_KEY = os.getenv("ALPHA_VANTAGE_KEY")

@@ -1,7 +1,9 @@
-from flask import Flask
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from .config import Config
 import os
+from .BuyRequest import BuyRequest
+from .buy import buy_stock
 
 db = SQLAlchemy() # SQLAlchemy instance for database interactions
 
@@ -32,5 +34,18 @@ def create_app():
                 "test": "/api/test-connection"
             }
         }
+
+    @app.route("/buy", methods=["POST"])
+    def buy():
+        data = request.json
+        try:
+            buy_request = BuyRequest(
+                symbol=data["symbol"],
+                quantity=int(data["quantity"]),
+            )
+            print(buy_stock(buy_request, 'portfolio', 1000.0))
+            return jsonify({"message": "Buy successful"}), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 400
 
     return app
