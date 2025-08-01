@@ -8,6 +8,16 @@ from .market import (
     get_company_earnings,
     test_api_connection
 )
+from .portfolio import (
+    get_portfolio_summary,
+    get_trade_history,
+    get_cash_balance,
+    get_portfolio_performance
+)
+from .buy import buy_stock, get_stock_quote, validate_buy_request
+from .sell import sell_stock, get_fifo_holdings
+from .buyRequest import buyRequest
+from .sellRequest import sellRequest
 
 bp = Blueprint("api", __name__) # helps organize routes 
 
@@ -117,4 +127,143 @@ def test_connection():
             return jsonify({"status": "failed", "message": "API connection failed"}), 500
     except Exception as e:
         print(f"Error testing connection: {str(e)}")
+        return {"error": str(e)}, 500
+
+# Portfolio Management Endpoints
+@bp.get("/portfolio")
+def portfolio_summary():
+    """Get complete portfolio summary"""
+    try:
+        symbol = request.args.get('symbol')
+        print(f"API request received for portfolio summary: {symbol if symbol else 'all holdings'}")
+        data = get_portfolio_summary(symbol)
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error getting portfolio summary: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.get("/portfolio/trades")
+def trade_history():
+    """Get trade history"""
+    try:
+        symbol = request.args.get('symbol')
+        limit = int(request.args.get('limit', 50))
+        print(f"API request received for trade history: {symbol if symbol else 'all'}")
+        data = get_trade_history(symbol, limit)
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error getting trade history: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.get("/portfolio/cash")
+def cash_balance():
+    """Get current cash balance"""
+    try:
+        user_id = request.args.get('user_id', 'default_user')
+        print(f"API request received for cash balance: {user_id}")
+        data = get_cash_balance(user_id)
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error getting cash balance: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.get("/portfolio/performance")
+def portfolio_performance():
+    """Get portfolio performance metrics"""
+    try:
+        days = int(request.args.get('days', 30))
+        print(f"API request received for portfolio performance: {days} days")
+        data = get_portfolio_performance(days)
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error getting portfolio performance: {str(e)}")
+        return {"error": str(e)}, 500
+
+# Trading Endpoints
+@bp.post("/trade/buy")
+def trade_buy():
+    """Execute buy order"""
+    try:
+        data = request.get_json()
+        if not data:
+            return {"error": "No data provided"}, 400
+        
+        # Validate required fields
+        if 'symbol' not in data or 'quantity' not in data:
+            return {"error": "Symbol and quantity are required"}, 400
+        
+        # Create buy request
+        buy_req = buyRequest(data['symbol'], int(data['quantity']))
+        
+        # Validate request
+        validation_error = validate_buy_request(buy_req)
+        if validation_error:
+            return {"error": validation_error}, 400
+        
+        # Get cash balance or use provided amount
+        cash = data.get('cash')
+        user_id = data.get('user_id', 'default_user')
+        
+        print(f"API request received for buy: {buy_req.quantity} shares of {buy_req.symbol}")
+        result = buy_stock(buy_req, cash, user_id)
+        
+        # Check if transaction was successful
+        if "successful" in result.lower():
+            return jsonify({"status": "success", "message": result})
+        else:
+            return jsonify({"status": "failed", "message": result}), 400
+            
+    except ValueError as e:
+        return {"error": f"Invalid data format: {str(e)}"}, 400
+    except Exception as e:
+        print(f"Error processing buy order: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.post("/trade/sell")
+def trade_sell():
+    """Execute sell order"""
+    try:
+        data = request.get_json()
+        if not data:
+            return {"error": "No data provided"}, 400
+        
+        # Validate required fields
+        if 'symbol' not in data or 'quantity' not in data:
+            return {"error": "Symbol and quantity are required"}, 400
+        
+        # Create sell request
+        sell_req = sellRequest(data['symbol'], int(data['quantity']))
+        
+        # Get current price from database
+        quote_data = get_stock_quote(sell_req.symbol)
+        if 'error' in quote_data:
+            return {"error": f"Cannot get current price: {quote_data['error']}"}, 400
+        
+        current_price = quote_data['current_price']
+        
+        print(f"API request received for sell: {sell_req.quantity} shares of {sell_req.symbol}")
+        result = sell_stock(sell_req, current_price)
+        
+        # Check if transaction was successful
+        if "successful" in result.lower():
+            return jsonify({"status": "success", "message": result})
+        else:
+            return jsonify({"status": "failed", "message": result}), 400
+            
+    except ValueError as e:
+        return {"error": f"Invalid data format: {str(e)}"}, 400
+    except Exception as e:
+        print(f"Error processing sell order: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.get("/trade/holdings/<symbol>")
+def get_holdings_info(symbol):
+    """Get FIFO holdings information for a symbol"""
+    try:
+        quantity = int(request.args.get('quantity', 1))
+        print(f"API request received for holdings info: {symbol}")
+        data = get_fifo_holdings(symbol.upper(), quantity)
+        return jsonify({"symbol": symbol.upper(), "fifo_holdings": data})
+    except Exception as e:
+        print(f"Error getting holdings info: {str(e)}")
         return {"error": str(e)}, 500

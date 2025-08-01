@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from .config import Config
 import os
 from .buyRequest import buyRequest
-from .buy import buy_stock
+from .buy import buy_stock, test_database_connection
 
 db = SQLAlchemy() # SQLAlchemy instance for database interactions
 
@@ -25,10 +25,15 @@ def create_app():
             api_key_status = f"configured ({len(api_keys)} key{'s' if len(api_keys) > 1 else ''})"
         else:
             api_key_status = "missing"
+        
+        # Test database connection
+        db_status = "connected" if test_database_connection() else "disconnected"
+        
         return {
             "status": "ok",
             "message": "Portfolio Manager API is running",
             "api_key_status": api_key_status,
+            "database_status": db_status,
             "endpoints": {
                 "quotes": "/api/stocks/<symbol>",
                 "overview": "/api/stocks/<symbol>/overview",
