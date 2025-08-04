@@ -42,7 +42,10 @@ const Portfolio = () => {
           name: `${holding.stock_symbol} Inc.`, // Could be enhanced with company names
           quantity: parseFloat(holding.quantity),
           averageCost: parseFloat(holding.average_cost),
-          currentPrice: parseFloat(holding.average_cost) // Will be updated with current price
+          currentPrice: parseFloat(holding.current_price || holding.average_cost), // Use database current price
+          marketValue: parseFloat(holding.market_value || 0),
+          costBasis: parseFloat(holding.cost_basis || 0),
+          unrealizedPnl: parseFloat(holding.unrealized_pnl || 0)
         }));
         
         if (portfolioResponse.value.summary) {
@@ -71,31 +74,7 @@ const Portfolio = () => {
         cashBalance = parseFloat(cashResponse.value.cash_balance);
       }
 
-      // Fetch current market prices for holdings
-      for (const holding of holdings) {
-        try {
-          const quote = await apiService.getStockQuote(holding.symbol);
-          if (quote && quote['05. price']) {
-            holding.currentPrice = parseFloat(quote['05. price']);
-          }
-        } catch (err) {
-          console.warn(`Failed to fetch current price for ${holding.symbol}:`, err);
-        }
-      }
-
-      // Recalculate totals with current prices
-      if (holdings.length > 0) {
-        totalValue = holdings.reduce((sum, holding) => 
-          sum + (holding.quantity * holding.currentPrice), 0
-        );
-        
-        const totalCost = holdings.reduce((sum, holding) => 
-          sum + (holding.quantity * holding.averageCost), 0
-        );
-        
-        totalPL = totalValue - totalCost;
-      }
-      
+      // Portfolio data is already calculated by backend with current market prices
       setPortfolioData({
         totalValue,
         totalCash: cashBalance,
@@ -127,25 +106,19 @@ const Portfolio = () => {
     });
   };
 
-  // Prepare data for charts
+  // Prepare data for charts using database values
   const pieChartData = portfolioData.holdings.map(holding => ({
     name: holding.symbol,
-    value: holding.quantity * holding.currentPrice,
-    percentage: ((holding.quantity * holding.currentPrice) / portfolioData.totalValue * 100).toFixed(1)
+    value: holding.marketValue,
+    percentage: ((holding.marketValue) / portfolioData.totalValue * 100).toFixed(1)
   }));
 
-  const barChartData = portfolioData.holdings.map(holding => {
-    const marketValue = holding.quantity * holding.currentPrice;
-    const totalCost = holding.quantity * holding.averageCost;
-    const pl = marketValue - totalCost;
-    
-    return {
-      symbol: holding.symbol,
-      'Market Value': marketValue,
-      'Total Cost': totalCost,
-      'P&L': pl
-    };
-  });
+  const barChartData = portfolioData.holdings.map(holding => ({
+    symbol: holding.symbol,
+    'Market Value': holding.marketValue,
+    'Total Cost': holding.costBasis,
+    'P&L': holding.unrealizedPnl
+  }));
 
   const COLORS = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe'];
 
@@ -276,10 +249,11 @@ const Portfolio = () => {
                 </thead>
                 <tbody>
                   {portfolioData.holdings.map((holding, index) => {
-                    const marketValue = holding.quantity * holding.currentPrice;
-                    const totalCost = holding.quantity * holding.averageCost;
-                    const pl = marketValue - totalCost;
-                    const plPercent = (pl / totalCost) * 100;
+                    // Use pre-calculated values from database
+                    const marketValue = holding.marketValue;
+                    const totalCost = holding.costBasis;
+                    const pl = holding.unrealizedPnl;
+                    const plPercent = totalCost > 0 ? (pl / totalCost) * 100 : 0;
                     
                     return (
                       <tr key={index}>

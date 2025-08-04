@@ -36,7 +36,9 @@ const Dashboard = () => {
           symbol: holding.stock_symbol,
           quantity: parseFloat(holding.quantity),
           averageCost: parseFloat(holding.average_cost),
-          currentPrice: 0 // Will be updated with current market price
+          currentPrice: parseFloat(holding.current_price || holding.average_cost), // Use database current price
+          marketValue: parseFloat(holding.market_value || 0),
+          unrealizedPnl: parseFloat(holding.unrealized_pnl || 0)
         }));
         
         if (portfolioResponse.value.summary) {
@@ -51,7 +53,7 @@ const Dashboard = () => {
         cashBalance = parseFloat(cashResponse.value.cash_balance);
       }
 
-      // Fetch current quotes for watchlist stocks
+      // Fetch current quotes for watchlist stocks only (not for portfolio holdings)
       const quotes = {};
       for (const symbol of watchlist) {
         try {
@@ -60,26 +62,6 @@ const Dashboard = () => {
         } catch (err) {
           console.warn(`Failed to fetch quote for ${symbol}:`, err);
         }
-      }
-      
-      // Update holdings with current market prices
-      for (const holding of holdings) {
-        if (quotes[holding.symbol]) {
-          holding.currentPrice = parseFloat(quotes[holding.symbol]['05. price'] || holding.averageCost);
-        }
-      }
-      
-      // Recalculate totals with current prices if we have holdings
-      if (holdings.length > 0) {
-        totalValue = holdings.reduce((sum, holding) => 
-          sum + (holding.quantity * holding.currentPrice), 0
-        );
-        
-        const totalCost = holdings.reduce((sum, holding) => 
-          sum + (holding.quantity * holding.averageCost), 0
-        );
-        
-        totalPL = totalValue - totalCost;
       }
       
       setStockQuotes(quotes);
@@ -179,9 +161,9 @@ const Dashboard = () => {
                 </thead>
                 <tbody>
                   {portfolioData.holdings.map((holding, index) => {
-                    const marketValue = holding.quantity * parseFloat(holding.currentPrice);
-                    const totalCost = holding.quantity * holding.averageCost;
-                    const pl = marketValue - totalCost;
+                    // Use pre-calculated values from database
+                    const marketValue = holding.marketValue;
+                    const pl = holding.unrealizedPnl;
                     
                     return (
                       <tr key={index}>
