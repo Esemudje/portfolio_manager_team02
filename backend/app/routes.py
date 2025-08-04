@@ -42,6 +42,21 @@ def stock_quote(symbol):
         print(f"Error getting quote for {symbol}: {str(e)}")
         return {"error": str(e)}, 500
 
+@bp.get("/stocks/<symbol>/db-only")
+def stock_quote_db_only(symbol):
+    """Get stock quote from database cache only (no API fallback)"""
+    try:
+        print(f"API request received for database-only quote: {symbol}")
+        data = get_stock_quote(symbol.upper())
+        if 'error' in data:
+            print(f"No cached data found for symbol: {symbol}")
+            return {"error": data['error']}, 404
+        print(f"Cached quote data sent for: {symbol}")
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error getting cached quote for {symbol}: {str(e)}")
+        return {"error": str(e)}, 500
+
 @bp.get("/stocks/<symbol>/overview")
 def stock_overview(symbol):
     """Get comprehensive company overview"""

@@ -24,14 +24,15 @@ const Portfolio = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch real data from database
+      // Fetch real data from database - this already includes calculated P&L and current prices
+      // No additional API calls needed as backend provides comprehensive portfolio data
       const [portfolioResponse, tradesResponse, cashResponse] = await Promise.allSettled([
         apiService.getPortfolio(),
         apiService.getTrades(),
         apiService.getBalance()
       ]);
 
-      // Process portfolio holdings
+      // Process portfolio holdings - all data comes from database with pre-calculated values
       let holdings = [];
       let totalValue = 0;
       let totalPL = 0;
@@ -39,13 +40,13 @@ const Portfolio = () => {
       if (portfolioResponse.status === 'fulfilled' && portfolioResponse.value.holdings) {
         holdings = portfolioResponse.value.holdings.map(holding => ({
           symbol: holding.stock_symbol,
-          name: `${holding.stock_symbol} Inc.`, // Could be enhanced with company names
+          name: `${holding.stock_symbol} Inc.`, // Could be enhanced with company names from database
           quantity: parseFloat(holding.quantity),
           averageCost: parseFloat(holding.average_cost),
-          currentPrice: parseFloat(holding.current_price || holding.average_cost), // Use database current price
-          marketValue: parseFloat(holding.market_value || 0),
-          costBasis: parseFloat(holding.cost_basis || 0),
-          unrealizedPnl: parseFloat(holding.unrealized_pnl || 0)
+          currentPrice: parseFloat(holding.current_price || holding.average_cost), // From database cache
+          marketValue: parseFloat(holding.market_value || 0), // Pre-calculated by backend
+          costBasis: parseFloat(holding.cost_basis || 0), // Pre-calculated by backend  
+          unrealizedPnl: parseFloat(holding.unrealized_pnl || 0) // Pre-calculated by backend
         }));
         
         if (portfolioResponse.value.summary) {
@@ -54,7 +55,7 @@ const Portfolio = () => {
         }
       }
 
-      // Process trades
+      // Process trades - all from database, no API calls needed
       let trades = [];
       if (tradesResponse.status === 'fulfilled' && tradesResponse.value.trades) {
         trades = tradesResponse.value.trades.map(trade => ({

@@ -25,6 +25,16 @@
 .chart-container {
   height: 400px;
   margin: 1rem 0;
+  min-height: 350px;
+  width: 100%;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .chart-container {
+    height: 300px;
+    min-height: 250px;
+  }
 }
 
 /* Stock list */

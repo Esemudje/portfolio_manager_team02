@@ -56,12 +56,24 @@ const Trading = () => {
       setError(null);
       setSelectedStock(symbol);
       
+      // Use database-first approach - backend handles database check + API fallback
       const quote = await apiService.getStockQuote(symbol);
       setStockQuote(quote);
       
     } catch (err) {
-      setError(`Failed to fetch data for ${symbol}`);
-      console.error('Stock selection error:', err);
+      // If API fails, try to get cached data from database
+      try {
+        const cachedQuote = await apiService.getStockQuoteFromDb(symbol);
+        if (cachedQuote && !cachedQuote.error) {
+          setStockQuote(cachedQuote);
+          console.warn(`Using cached data for ${symbol} - API unavailable`);
+        } else {
+          setError(`No data available for ${symbol} - please try again later`);
+        }
+      } catch (dbErr) {
+        setError(`Failed to fetch data for ${symbol}`);
+        console.error('Stock selection error:', err);
+      }
     } finally {
       setLoading(false);
     }
@@ -82,7 +94,7 @@ const Trading = () => {
       return;
     }
 
-    const price = parseFloat(stockQuote['05. price'] || 0);
+    const price = parseFloat(stockQuote['05. price'] || stockQuote.current_price || 0);
     const totalCost = price * quantity;
 
     if (tradeAction === 'buy' && totalCost > availableCash) {
@@ -139,7 +151,8 @@ const Trading = () => {
 
   const calculateTotal = () => {
     if (!stockQuote) return 0;
-    const price = parseFloat(stockQuote['05. price'] || 0);
+    // Handle both API format ('05. price') and database format ('current_price')
+    const price = parseFloat(stockQuote['05. price'] || stockQuote.current_price || 0);
     return price * quantity;
   };
 
@@ -194,16 +207,16 @@ const Trading = () => {
                 <div>
                   <h3>{selectedStock}</h3>
                   <p style={{ color: '#6b7280', margin: 0 }}>
-                    {stockQuote['01. symbol']} - Last Updated: {stockQuote['07. latest trading day']}
+                    {stockQuote['01. symbol'] || stockQuote.symbol} - Last Updated: {stockQuote['07. latest trading day'] || stockQuote.last_updated || 'N/A'}
                   </p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                    {formatCurrency(stockQuote['05. price'])}
+                    {formatCurrency(stockQuote['05. price'] || stockQuote.current_price)}
                   </div>
-                  <div className={parseFloat(stockQuote['09. change'] || 0) >= 0 ? 'positive' : 'negative'}>
-                    {parseFloat(stockQuote['09. change'] || 0) >= 0 ? '+' : ''}
-                    {formatCurrency(stockQuote['09. change'] || 0)} ({stockQuote['10. change percent'] || '0%'})
+                  <div className={parseFloat(stockQuote['09. change'] || stockQuote.change_amount || 0) >= 0 ? 'positive' : 'negative'}>
+                    {parseFloat(stockQuote['09. change'] || stockQuote.change_amount || 0) >= 0 ? '+' : ''}
+                    {formatCurrency(stockQuote['09. change'] || stockQuote.change_amount || 0)} ({stockQuote['10. change percent'] || stockQuote.change_percent || '0%'})
                   </div>
                 </div>
               </div>
@@ -306,7 +319,7 @@ const Trading = () => {
                   </div>
                   <div className="trade-summary-row">
                     <span>Price per share:</span>
-                    <span>{formatCurrency(stockQuote['05. price'])}</span>
+                    <span>{formatCurrency(stockQuote['05. price'] || stockQuote.current_price)}</span>
                   </div>
                   <div className="trade-summary-row total">
                     <span>Total {tradeAction === 'buy' ? 'Cost' : 'Proceeds'}:</span>

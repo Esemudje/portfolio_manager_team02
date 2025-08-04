@@ -17,7 +17,9 @@ def get_current_price(symbol: str) -> Dict:
         if db:
             cursor = db.cursor(dictionary=True)
             cursor.execute("""
-                SELECT stock_symbol, current_price, updated_at 
+                SELECT stock_symbol, current_price, open_price, high_price, low_price,
+                       volume, previous_close, change_amount, change_percent,
+                       latest_trading_day, updated_at 
                 FROM api_stock_information 
                 WHERE stock_symbol = %s
             """, (symbol.upper(),))
@@ -25,11 +27,31 @@ def get_current_price(symbol: str) -> Dict:
             result = cursor.fetchone()
             if result:
                 print(f"Price found in database for {symbol}: ${result['current_price']}")
+                
+                # Return data in both API format and database format for compatibility
+                change_percent_formatted = f"{result['change_percent']}%" if result['change_percent'] is not None else "0%"
+                
                 return {
+                    # Database format (new)
                     "symbol": result['stock_symbol'],
-                    "current_price": float(result['current_price']),
+                    "current_price": float(result['current_price']) if result['current_price'] else 0,
+                    "change_amount": float(result['change_amount']) if result['change_amount'] else 0,
+                    "change_percent": change_percent_formatted,
+                    "volume": int(result['volume']) if result['volume'] else 0,
                     "source": "database",
-                    "last_updated": result['updated_at'].strftime('%Y-%m-%d %H:%M:%S') if result['updated_at'] else None
+                    "last_updated": result['updated_at'].strftime('%Y-%m-%d %H:%M:%S') if result['updated_at'] else None,
+                    
+                    # API format compatibility (for existing frontend code)
+                    "01. symbol": result['stock_symbol'],
+                    "02. open": str(result['open_price']) if result['open_price'] else "0",
+                    "03. high": str(result['high_price']) if result['high_price'] else "0", 
+                    "04. low": str(result['low_price']) if result['low_price'] else "0",
+                    "05. price": str(result['current_price']) if result['current_price'] else "0",
+                    "06. volume": str(result['volume']) if result['volume'] else "0",
+                    "07. latest trading day": result['latest_trading_day'] if result['latest_trading_day'] else None,
+                    "08. previous close": str(result['previous_close']) if result['previous_close'] else "0",
+                    "09. change": str(result['change_amount']) if result['change_amount'] else "0",
+                    "10. change percent": change_percent_formatted
                 }
         
         # If not found in database, get from API and cache it

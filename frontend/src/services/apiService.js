@@ -60,9 +60,15 @@ const apiService = {
     return api.get('/test-connection');
   },
 
-  // Get real-time stock quote
+  // Database-first stock quote (uses cached data when available)
   getStockQuote: async (symbol) => {
+    // Backend automatically checks database first, then API if needed
     return api.get(`/stocks/${symbol}`);
+  },
+
+  // Get stock quote from database only (no API fallback)
+  getStockQuoteFromDb: async (symbol) => {
+    return api.get(`/stocks/${symbol}/db-only`);
   },
 
   // Get company overview
