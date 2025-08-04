@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import apiService from '../services/apiService';
 
 const Portfolio = () => {
   const [portfolioData, setPortfolioData] = useState({
@@ -23,53 +24,63 @@ const Portfolio = () => {
       setLoading(true);
       setError(null);
       
-      // Mock data - in a real app, this would come from your backend database
-      const mockHoldings = [
-        { 
-          symbol: 'AAPL', 
-          quantity: 15, 
-          averageCost: 193.33, 
-          currentPrice: 195.60,
-          name: 'Apple Inc.'
-        },
-        { 
-          symbol: 'GOOGL', 
-          quantity: 1, 
-          averageCost: 2700.00, 
-          currentPrice: 2742.50,
-          name: 'Alphabet Inc.'
-        },
-        { 
-          symbol: 'AMZN', 
-          quantity: 3, 
-          averageCost: 230.00, 
-          currentPrice: 236.50,
-          name: 'Amazon.com Inc.'
-        }
-      ];
+      // Fetch real data from database
+      const [portfolioResponse, tradesResponse, cashResponse] = await Promise.allSettled([
+        apiService.getPortfolio(),
+        apiService.getTrades(),
+        apiService.getBalance()
+      ]);
 
-      const mockTrades = [
-        { id: 1, symbol: 'AAPL', type: 'BUY', quantity: 10, price: 190.00, date: '2025-01-30', total: 1900.00 },
-        { id: 2, symbol: 'AAPL', type: 'BUY', quantity: 5, price: 200.00, date: '2025-01-29', total: 1000.00 },
-        { id: 3, symbol: 'GOOGL', type: 'BUY', quantity: 2, price: 2700.00, date: '2025-01-28', total: 5400.00 },
-        { id: 4, symbol: 'GOOGL', type: 'SELL', quantity: 1, price: 2750.00, date: '2025-01-27', total: 2750.00 },
-        { id: 5, symbol: 'AMZN', type: 'BUY', quantity: 3, price: 230.00, date: '2025-01-26', total: 690.00 }
-      ];
+      // Process portfolio holdings
+      let holdings = [];
+      let totalValue = 0;
+      let totalPL = 0;
       
-      const totalValue = mockHoldings.reduce((sum, holding) => 
-        sum + (holding.quantity * holding.currentPrice), 0
-      );
-      
-      const totalCost = mockHoldings.reduce((sum, holding) => 
-        sum + (holding.quantity * holding.averageCost), 0
-      );
-      
+      if (portfolioResponse.status === 'fulfilled' && portfolioResponse.value.holdings) {
+        holdings = portfolioResponse.value.holdings.map(holding => ({
+          symbol: holding.stock_symbol,
+          name: `${holding.stock_symbol} Inc.`, // Could be enhanced with company names
+          quantity: parseFloat(holding.quantity),
+          averageCost: parseFloat(holding.average_cost),
+          currentPrice: parseFloat(holding.current_price || holding.average_cost), // Use database current price
+          marketValue: parseFloat(holding.market_value || 0),
+          costBasis: parseFloat(holding.cost_basis || 0),
+          unrealizedPnl: parseFloat(holding.unrealized_pnl || 0)
+        }));
+        
+        if (portfolioResponse.value.summary) {
+          totalValue = portfolioResponse.value.summary.total_portfolio_value || 0;
+          totalPL = portfolioResponse.value.summary.total_pnl || 0;
+        }
+      }
+
+      // Process trades
+      let trades = [];
+      if (tradesResponse.status === 'fulfilled' && tradesResponse.value.trades) {
+        trades = tradesResponse.value.trades.map(trade => ({
+          id: trade.trade_id,
+          symbol: trade.stock_symbol,
+          type: trade.trade_type,
+          quantity: parseFloat(trade.quantity),
+          price: parseFloat(trade.price_at_trade),
+          date: trade.trade_date,
+          total: parseFloat(trade.quantity) * parseFloat(trade.price_at_trade)
+        }));
+      }
+
+      // Get current cash balance
+      let cashBalance = 10000; // Default fallback
+      if (cashResponse.status === 'fulfilled' && cashResponse.value.cash_balance !== undefined) {
+        cashBalance = parseFloat(cashResponse.value.cash_balance);
+      }
+
+      // Portfolio data is already calculated by backend with current market prices
       setPortfolioData({
         totalValue,
-        totalCash: 10000,
-        totalPL: totalValue - totalCost,
-        holdings: mockHoldings,
-        trades: mockTrades
+        totalCash: cashBalance,
+        totalPL,
+        holdings,
+        trades
       });
       
     } catch (err) {
@@ -95,25 +106,19 @@ const Portfolio = () => {
     });
   };
 
-  // Prepare data for charts
+  // Prepare data for charts using database values
   const pieChartData = portfolioData.holdings.map(holding => ({
     name: holding.symbol,
-    value: holding.quantity * holding.currentPrice,
-    percentage: ((holding.quantity * holding.currentPrice) / portfolioData.totalValue * 100).toFixed(1)
+    value: holding.marketValue,
+    percentage: ((holding.marketValue) / portfolioData.totalValue * 100).toFixed(1)
   }));
 
-  const barChartData = portfolioData.holdings.map(holding => {
-    const marketValue = holding.quantity * holding.currentPrice;
-    const totalCost = holding.quantity * holding.averageCost;
-    const pl = marketValue - totalCost;
-    
-    return {
-      symbol: holding.symbol,
-      'Market Value': marketValue,
-      'Total Cost': totalCost,
-      'P&L': pl
-    };
-  });
+  const barChartData = portfolioData.holdings.map(holding => ({
+    symbol: holding.symbol,
+    'Market Value': holding.marketValue,
+    'Total Cost': holding.costBasis,
+    'P&L': holding.unrealizedPnl
+  }));
 
   const COLORS = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe'];
 
@@ -244,10 +249,11 @@ const Portfolio = () => {
                 </thead>
                 <tbody>
                   {portfolioData.holdings.map((holding, index) => {
-                    const marketValue = holding.quantity * holding.currentPrice;
-                    const totalCost = holding.quantity * holding.averageCost;
-                    const pl = marketValue - totalCost;
-                    const plPercent = (pl / totalCost) * 100;
+                    // Use pre-calculated values from database
+                    const marketValue = holding.marketValue;
+                    const totalCost = holding.costBasis;
+                    const pl = holding.unrealizedPnl;
+                    const plPercent = totalCost > 0 ? (pl / totalCost) * 100 : 0;
                     
                     return (
                       <tr key={index}>

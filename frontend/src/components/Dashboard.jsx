@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, TrendingDown, DollarSign, PieChart } from 'lucide-react';
 import apiService from '../services/apiService';
 
 const Dashboard = () => {
@@ -16,16 +15,45 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Fetch quotes for watchlist stocks
+      // Fetch real portfolio data from database
+      const [portfolioResponse, cashResponse] = await Promise.allSettled([
+        apiService.getPortfolio(),
+        apiService.getBalance()
+      ]);
+
+      // Get portfolio data
+      let holdings = [];
+      let totalValue = 0;
+      let totalPL = 0;
+      
+      if (portfolioResponse.status === 'fulfilled' && portfolioResponse.value.holdings) {
+        holdings = portfolioResponse.value.holdings.map(holding => ({
+          symbol: holding.stock_symbol,
+          quantity: parseFloat(holding.quantity),
+          averageCost: parseFloat(holding.average_cost),
+          currentPrice: parseFloat(holding.current_price || holding.average_cost), // Use database current price
+          marketValue: parseFloat(holding.market_value || 0),
+          unrealizedPnl: parseFloat(holding.unrealized_pnl || 0)
+        }));
+        
+        if (portfolioResponse.value.summary) {
+          totalValue = portfolioResponse.value.summary.total_portfolio_value || 0;
+          totalPL = portfolioResponse.value.summary.total_pnl || 0;
+        }
+      }
+
+      // Get current cash balance
+      let cashBalance = 10000; // Default fallback
+      if (cashResponse.status === 'fulfilled' && cashResponse.value.cash_balance !== undefined) {
+        cashBalance = parseFloat(cashResponse.value.cash_balance);
+      }
+
+      // Fetch current quotes for watchlist stocks only (not for portfolio holdings)
       const quotes = {};
       for (const symbol of watchlist) {
         try {
@@ -37,28 +65,12 @@ const Dashboard = () => {
       }
       
       setStockQuotes(quotes);
-      
-      // Mock portfolio data - in a real app, this would come from your backend
-      const mockHoldings = [
-        { symbol: 'AAPL', quantity: 15, averageCost: 193.33, currentPrice: quotes.AAPL?.['05. price'] || 195.60 },
-        { symbol: 'GOOGL', quantity: 1, averageCost: 2700.00, currentPrice: quotes.GOOGL?.['05. price'] || 2742.50 },
-        { symbol: 'AMZN', quantity: 3, averageCost: 230.00, currentPrice: quotes.AMZN?.['05. price'] || 236.50 }
-      ];
-      
-      const totalValue = mockHoldings.reduce((sum, holding) => 
-        sum + (holding.quantity * parseFloat(holding.currentPrice)), 0
-      );
-      
-      const totalCost = mockHoldings.reduce((sum, holding) => 
-        sum + (holding.quantity * holding.averageCost), 0
-      );
-      
       setPortfolioData({
         totalValue,
-        totalCash: 10000,
-        totalPL: totalValue - totalCost,
-        dayChange: 150.25, // Mock day change
-        holdings: mockHoldings
+        totalCash: cashBalance,
+        totalPL,
+        dayChange: 0, // Could be calculated from daily performance
+        holdings
       });
       
     } catch (err) {
@@ -67,7 +79,11 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [watchlist]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -145,9 +161,9 @@ const Dashboard = () => {
                 </thead>
                 <tbody>
                   {portfolioData.holdings.map((holding, index) => {
-                    const marketValue = holding.quantity * parseFloat(holding.currentPrice);
-                    const totalCost = holding.quantity * holding.averageCost;
-                    const pl = marketValue - totalCost;
+                    // Use pre-calculated values from database
+                    const marketValue = holding.marketValue;
+                    const pl = holding.unrealizedPnl;
                     
                     return (
                       <tr key={index}>

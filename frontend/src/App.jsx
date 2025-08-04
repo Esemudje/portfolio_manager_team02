@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard.jsx';
 import Portfolio from './components/Portfolio.jsx';
 import Trading from './components/Trading.jsx';
 import StockDetail from './components/StockDetail.jsx';
+import DatabaseTest from './components/DatabaseTest.jsx';
 import './App.css';
 
 function Navigation() {
@@ -39,6 +40,14 @@ function Navigation() {
                 Trading
               </Link>
             </li>
+            <li>
+              <Link 
+                to="/test" 
+                className={`nav-link ${location.pathname === '/test' ? 'active' : ''}`}
+              >
+                DB Test
+              </Link>
+            </li>
           </ul>
         </nav>
       </div>
@@ -58,6 +67,7 @@ function App() {
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/trading" element={<Trading />} />
             <Route path="/stock/:symbol" element={<StockDetail />} />
+            <Route path="/test" element={<DatabaseTest />} />
           </Routes>
         </main>
       </div>
