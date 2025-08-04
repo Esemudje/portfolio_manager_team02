@@ -18,6 +18,12 @@ from .buy import buy_stock, get_stock_quote, validate_buy_request
 from .sell import sell_stock, get_fifo_holdings
 from .buyRequest import buyRequest
 from .sellRequest import sellRequest
+from .pnl import (
+    calculate_unrealized_pnl, 
+    get_realized_pnl_summary, 
+    get_comprehensive_pnl_report,
+    update_unrealized_pnl_history
+)
 
 bp = Blueprint("api", __name__) # helps organize routes 
 
@@ -233,16 +239,11 @@ def trade_sell():
         
         # Create sell request
         sell_req = sellRequest(data['symbol'], int(data['quantity']))
-        
-        # Get current price from database
-        quote_data = get_stock_quote(sell_req.symbol)
-        if 'error' in quote_data:
-            return {"error": f"Cannot get current price: {quote_data['error']}"}, 400
-        
-        current_price = quote_data['current_price']
+        user_id = data.get('user_id', 'default_user')
         
         print(f"API request received for sell: {sell_req.quantity} shares of {sell_req.symbol}")
-        result = sell_stock(sell_req, current_price)
+        # sell_stock now handles price fetching internally
+        result = sell_stock(sell_req, user_id=user_id)
         
         # Check if transaction was successful
         if "successful" in result.lower():
@@ -266,4 +267,75 @@ def get_holdings_info(symbol):
         return jsonify({"symbol": symbol.upper(), "fifo_holdings": data})
     except Exception as e:
         print(f"Error getting holdings info: {str(e)}")
+        return {"error": str(e)}, 500
+
+# Profit & Loss Endpoints
+@bp.get("/pnl/unrealized")
+def unrealized_pnl():
+    """Get unrealized P&L for all holdings or specific symbol"""
+    try:
+        symbol = request.args.get('symbol')
+        user_id = request.args.get('user_id', 'default_user')
+        
+        print(f"API request received for unrealized P&L: {symbol if symbol else 'all holdings'}")
+        data = calculate_unrealized_pnl(symbol, user_id)
+        
+        if 'error' in data:
+            return {"error": data['error']}, 500
+            
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error getting unrealized P&L: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.get("/pnl/realized")
+def realized_pnl():
+    """Get realized P&L summary"""
+    try:
+        symbol = request.args.get('symbol')
+        days = int(request.args.get('days', 30))
+        
+        print(f"API request received for realized P&L: {symbol if symbol else 'all'} ({days} days)")
+        data = get_realized_pnl_summary(symbol, days)
+        
+        if 'error' in data:
+            return {"error": data['error']}, 500
+            
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error getting realized P&L: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.get("/pnl/comprehensive")
+def comprehensive_pnl():
+    """Get comprehensive P&L report (realized + unrealized)"""
+    try:
+        symbol = request.args.get('symbol')
+        days = int(request.args.get('days', 30))
+        
+        print(f"API request received for comprehensive P&L: {symbol if symbol else 'all'} ({days} days)")
+        data = get_comprehensive_pnl_report(symbol, days)
+        
+        if 'error' in data:
+            return {"error": data['error']}, 500
+            
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error getting comprehensive P&L: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.post("/pnl/update-unrealized")
+def update_unrealized_history():
+    """Update unrealized P&L history (for periodic snapshots)"""
+    try:
+        print("API request received to update unrealized P&L history")
+        success = update_unrealized_pnl_history()
+        
+        if success:
+            return jsonify({"status": "success", "message": "Unrealized P&L history updated"})
+        else:
+            return {"error": "Failed to update unrealized P&L history"}, 500
+            
+    except Exception as e:
+        print(f"Error updating unrealized P&L history: {str(e)}")
         return {"error": str(e)}, 500

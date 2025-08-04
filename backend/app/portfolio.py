@@ -18,7 +18,7 @@ def get_db_connection():
         return None
 
 def get_portfolio_summary(symbol: str = None) -> Dict:
-    """Get portfolio summary with realized/unrealized P&L"""
+    """Get enhanced portfolio summary with P&L data"""
     db = None
     try:
         db = get_db_connection()
@@ -28,19 +28,25 @@ def get_portfolio_summary(symbol: str = None) -> Dict:
         cursor = db.cursor(dictionary=True)
         
         if symbol:
-            # Get specific symbol summary
+            # Get specific symbol summary even if the current price is not in api_stock_information, so left join is good
             cursor.execute("""
-                SELECT stock_symbol, quantity, average_cost FROM holdings WHERE stock_symbol = %s
+                SELECT h.stock_symbol, h.quantity, h.average_cost, s.current_price
+                FROM holdings h
+                LEFT JOIN api_stock_information s ON h.stock_symbol = s.stock_symbol
+                WHERE h.stock_symbol = %s
             """, (symbol,))
         else:
-            # Get all holdings
+            # Get all holdings with current prices
             cursor.execute("""
-                SELECT stock_symbol, quantity, average_cost FROM holdings ORDER BY stock_symbol
+                SELECT h.stock_symbol, h.quantity, h.average_cost, s.current_price
+                FROM holdings h
+                LEFT JOIN api_stock_information s ON h.stock_symbol = s.stock_symbol
+                ORDER BY h.stock_symbol
             """)
         
         holdings = cursor.fetchall()
         
-        # Get total realized P&L
+        # Get total realized P&L for the period
         if symbol:
             cursor.execute("""
                 SELECT COALESCE(SUM(realized_pnl), 0) as total_realized_pnl 
@@ -59,40 +65,44 @@ def get_portfolio_summary(symbol: str = None) -> Dict:
         portfolio_value = 0
         total_cost_basis = 0
         unrealized_pnl = 0
+        enhanced_holdings = []
         
         for holding in holdings:
-            # Get current market price
-            cursor.execute("""
-                SELECT current_price FROM api_stock_information WHERE stock_symbol = %s
-            """, (holding['stock_symbol'],))
+            quantity = float(holding['quantity'])
+            avg_cost = float(holding['average_cost'])
+            # Use current_price from the join if available, otherwise use average_cost
+            current_price = float(holding['current_price']) if holding['current_price'] else avg_cost
             
-            price_result = cursor.fetchone()
-            if price_result:
-                current_price = float(price_result['current_price'])
-                quantity = float(holding['quantity'])
-                avg_cost = float(holding['average_cost'])
-                
-                market_value = current_price * quantity
-                cost_basis = avg_cost * quantity # Calculate cost basis by holding quantity 
-                
-                portfolio_value += market_value
-                total_cost_basis += cost_basis
-                unrealized_pnl += (market_value - cost_basis)
-                
-                # Add current price and P&L to holding info
-                holding['current_price'] = current_price
-                holding['market_value'] = round(market_value, 2)
-                holding['cost_basis'] = round(cost_basis, 2)
-                holding['unrealized_pnl'] = round(market_value - cost_basis, 2)
+            market_value = current_price * quantity
+            cost_basis = avg_cost * quantity
+            holding_unrealized_pnl = market_value - cost_basis
+            
+            portfolio_value += market_value
+            total_cost_basis += cost_basis
+            unrealized_pnl += holding_unrealized_pnl
+            
+            # Create enhanced holding info
+            enhanced_holdings.append({
+                'stock_symbol': holding['stock_symbol'],
+                'quantity': quantity,
+                'average_cost': avg_cost,
+                'current_price': current_price,
+                'market_value': round(market_value, 2),
+                'cost_basis': round(cost_basis, 2),
+                'unrealized_pnl': round(holding_unrealized_pnl, 2),
+                'unrealized_pnl_percent': round((holding_unrealized_pnl / cost_basis * 100) if cost_basis > 0 else 0, 2)
+            })
         
         return {
-            "holdings": holdings,
+            "holdings": enhanced_holdings,
             "summary": {
                 "total_portfolio_value": round(portfolio_value, 2),
                 "total_cost_basis": round(total_cost_basis, 2),
-                "total_realized_pnl": round(float(total_realized_pnl), 2),
                 "total_unrealized_pnl": round(unrealized_pnl, 2),
-                "total_pnl": round(float(total_realized_pnl) + unrealized_pnl, 2)
+                "total_realized_pnl": float(total_realized_pnl),
+                "total_pnl": round(unrealized_pnl + float(total_realized_pnl), 2),
+                "unrealized_pnl_percent": round((unrealized_pnl / total_cost_basis * 100) if total_cost_basis > 0 else 0, 2),
+                "holdings_count": len(enhanced_holdings)
             }
         }
         
