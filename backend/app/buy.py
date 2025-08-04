@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from .buyRequest import buyRequest
 from .config import Config
 from .portfolio import get_cash_balance, update_cash_balance
+from .market import get_quote
 
 def get_db_connection():
     """Get database connection using config"""
@@ -19,6 +20,109 @@ def get_db_connection():
     except Exception as e:
         print(f"Database connection error: {e}")
         return None
+
+def get_current_price(symbol: str) -> Dict:
+    """Get current stock price with database-first, API-fallback strategy"""
+    db = None
+    try:
+        # First, try to get price from database (fast)
+        db = get_db_connection()
+        if db:
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT stock_symbol, current_price, updated_at 
+                FROM api_stock_information 
+                WHERE stock_symbol = %s
+            """, (symbol.upper(),))
+            
+            result = cursor.fetchone()
+            if result:
+                print(f"Price found in database for {symbol}: ${result['current_price']}")
+                return {
+                    "symbol": result['stock_symbol'],
+                    "current_price": float(result['current_price']),
+                    "source": "database",
+                    "last_updated": result['updated_at'].strftime('%Y-%m-%d %H:%M:%S') if result['updated_at'] else None
+                }
+        
+        # If not found in database, get from API and cache it
+        print(f"Price not found in database for {symbol}, fetching from API...")
+        api_data = get_quote(symbol.upper())
+        
+        if api_data and '05. price' in api_data:
+            current_price = float(api_data['05. price'])
+            
+            # Cache the price in database for future use
+            cache_price_in_database(symbol.upper(), api_data)
+            
+            print(f"Fresh price from API for {symbol}: ${current_price}")
+            return {
+                "symbol": symbol.upper(),
+                "current_price": current_price,
+                "source": "api",
+                "last_updated": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+        else:
+            return {"error": f"Unable to get price for {symbol} from API"}
+            
+    except Exception as e:
+        print(f"Error getting current price for {symbol}: {e}")
+        return {"error": str(e)}
+    finally:
+        if db:
+            db.close()
+
+def cache_price_in_database(symbol: str, api_data: Dict) -> bool:
+    """Cache API price data in database for future use"""
+    db = None
+    try:
+        db = get_db_connection()
+        if not db:
+            return False
+            
+        cursor = db.cursor()
+        
+        # Extract relevant data from API response
+        current_price = float(api_data.get('05. price', 0))
+        open_price = float(api_data.get('02. open', current_price))
+        high_price = float(api_data.get('03. high', current_price))
+        low_price = float(api_data.get('04. low', current_price))
+        previous_close = float(api_data.get('08. previous close', current_price))
+        change_amount = float(api_data.get('09. change', 0))
+        change_percent = api_data.get('10. change percent', '0%').rstrip('%')
+        volume = int(api_data.get('06. volume', 0))
+        latest_trading_day = api_data.get('07. latest trading day', datetime.date.today().strftime('%Y-%m-%d'))
+        
+        # Insert or update the stock information
+        cursor.execute("""
+            INSERT INTO api_stock_information 
+            (stock_symbol, open_price, high_price, low_price, current_price, volume, 
+             latest_trading_day, previous_close, change_amount, change_percent)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            open_price = VALUES(open_price),
+            high_price = VALUES(high_price),
+            low_price = VALUES(low_price),
+            current_price = VALUES(current_price),
+            volume = VALUES(volume),
+            latest_trading_day = VALUES(latest_trading_day),
+            previous_close = VALUES(previous_close),
+            change_amount = VALUES(change_amount),
+            change_percent = VALUES(change_percent),
+            updated_at = CURRENT_TIMESTAMP
+        """, (symbol, open_price, high_price, low_price, current_price, volume,
+              latest_trading_day, previous_close, change_amount, change_percent))
+        
+        db.commit()
+        print(f"Cached fresh price data for {symbol} in database")
+        return True
+        
+    except Exception as e:
+        print(f"Error caching price for {symbol}: {e}")
+        return False
+    finally:
+        if db:
+            db.close()
 
 def test_database_connection() -> bool:
     """Test database connection and basic operations"""
@@ -55,17 +159,13 @@ def buy_stock(buy_request: buyRequest, cash: float = None, user_id: str = 'defau
 
         cursor = db.cursor(dictionary=True)
 
-        # Get current stock price
-        cursor.execute(
-            "SELECT current_price FROM api_stock_information WHERE stock_symbol = %s",
-            (buy_request.symbol.upper(),)
-        )
-        result = cursor.fetchone()
+        # Get current stock price using enhanced price fetching
+        price_data = get_current_price(buy_request.symbol)
+        if 'error' in price_data:
+            return f'Error getting price for {buy_request.symbol}: {price_data["error"]}'
 
-        if not result:
-            return f'Symbol {buy_request.symbol} not found in database'
-
-        price = float(result['current_price'])
+        price = price_data['current_price']
+        print(f"Using price ${price:.2f} from {price_data['source']} for {buy_request.symbol}")
         total_cost = price * buy_request.quantity
 
         # Use provided cash or get from database

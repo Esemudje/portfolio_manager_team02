@@ -29,7 +29,7 @@ def create_app():
         # Test database connection
         db_status = "connected" if test_database_connection() else "disconnected"
         
-        return {
+        return jsonify({
             "status": "ok",
             "message": "Portfolio Manager API is running",
             "api_key_status": api_key_status,
@@ -43,19 +43,6 @@ def create_app():
                 "earnings": "/api/stocks/<symbol>/earnings",
                 "test": "/api/test-connection"
             }
-        }
-
-    @app.route("/buy", methods=["POST"])
-    def buy():
-        data = request.json
-        try:
-            buy_request = buyRequest(
-                symbol=data["symbol"],
-                quantity=int(data["quantity"]),
-            )
-            print(buy_stock(buy_request, 'portfolio', 1000.0))
-            return jsonify({"message": "Buy successful"}), 200
-        except Exception as e:
-            return jsonify({"error": str(e)}), 400
+        })
 
     return app
