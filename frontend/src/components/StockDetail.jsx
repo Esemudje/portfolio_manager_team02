@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, Calendar, DollarSign } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import apiService from '../services/apiService';
 
@@ -27,16 +27,34 @@ const StockDetail = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch multiple endpoints in parallel
+      // Fetch multiple endpoints in parallel with intelligent data fetching
+      // Priority: 1. Database-cached data, 2. Fresh API data when needed
       const [quote, overview, dailyData, news] = await Promise.allSettled([
-        apiService.getStockQuote(stockSymbol),
+        apiService.getStockQuote(stockSymbol), // Backend handles database-first
         apiService.getStockOverview(stockSymbol),
         apiService.getDailyData(stockSymbol),
         apiService.getNews(stockSymbol)
       ]);
 
+      // Handle quote with fallback to cached data
+      let quoteData = null;
+      if (quote.status === 'fulfilled') {
+        quoteData = quote.value;
+      } else {
+        // Try to get cached quote data as fallback
+        try {
+          const cachedQuote = await apiService.getStockQuoteFromDb(stockSymbol);
+          if (cachedQuote && !cachedQuote.error) {
+            quoteData = cachedQuote;
+            console.warn(`Using cached quote data for ${stockSymbol}`);
+          }
+        } catch (cacheErr) {
+          console.warn(`No cached quote data available for ${stockSymbol}`);
+        }
+      }
+
       setStockData({
-        quote: quote.status === 'fulfilled' ? quote.value : null,
+        quote: quoteData,
         overview: overview.status === 'fulfilled' ? overview.value : null,
         dailyData: dailyData.status === 'fulfilled' ? dailyData.value : null,
         news: news.status === 'fulfilled' ? news.value : null
@@ -127,27 +145,27 @@ const StockDetail = () => {
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-value" style={{ color: '#667eea' }}>
-              {formatCurrency(quote['05. price'])}
+              {formatCurrency(quote['05. price'] || quote.current_price)}
             </div>
             <div className="stat-label">Current Price</div>
           </div>
           
           <div className="stat-card">
-            <div className={`stat-value ${parseFloat(quote['09. change'] || 0) >= 0 ? 'positive' : 'negative'}`}>
-              {parseFloat(quote['09. change'] || 0) >= 0 ? '+' : ''}{formatCurrency(quote['09. change'])}
+            <div className={`stat-value ${parseFloat(quote['09. change'] || quote.change_amount || 0) >= 0 ? 'positive' : 'negative'}`}>
+              {parseFloat(quote['09. change'] || quote.change_amount || 0) >= 0 ? '+' : ''}{formatCurrency(quote['09. change'] || quote.change_amount || 0)}
             </div>
             <div className="stat-label">Change</div>
           </div>
           
           <div className="stat-card">
-            <div className={`stat-value ${parseFloat(quote['10. change percent']?.replace('%', '') || 0) >= 0 ? 'positive' : 'negative'}`}>
-              {quote['10. change percent'] || 'N/A'}
+            <div className={`stat-value ${parseFloat(quote['10. change percent']?.replace('%', '') || quote.change_percent?.replace('%', '') || 0) >= 0 ? 'positive' : 'negative'}`}>
+              {quote['10. change percent'] || quote.change_percent || 'N/A'}
             </div>
             <div className="stat-label">Change %</div>
           </div>
           
           <div className="stat-card">
-            <div className="stat-value">{formatLargeNumber(quote['06. volume'])}</div>
+            <div className="stat-value">{formatLargeNumber(quote['06. volume'] || quote.volume)}</div>
             <div className="stat-label">Volume</div>
           </div>
         </div>

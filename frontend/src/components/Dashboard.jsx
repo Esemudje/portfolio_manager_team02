@@ -53,14 +53,25 @@ const Dashboard = () => {
         cashBalance = parseFloat(cashResponse.value.cash_balance);
       }
 
-      // Fetch current quotes for watchlist stocks only (not for portfolio holdings)
+      // Fetch quotes for watchlist stocks with intelligent caching
+      // First try database-only, then fallback to API if needed
       const quotes = {};
       for (const symbol of watchlist) {
         try {
+          // Use database-first approach (backend automatically handles this)
           const quote = await apiService.getStockQuote(symbol);
           quotes[symbol] = quote;
         } catch (err) {
           console.warn(`Failed to fetch quote for ${symbol}:`, err);
+          // Optionally try to get from database only as fallback
+          try {
+            const dbQuote = await apiService.getStockQuoteFromDb(symbol);
+            if (dbQuote && !dbQuote.error) {
+              quotes[symbol] = dbQuote;
+            }
+          } catch (dbErr) {
+            console.warn(`No cached data available for ${symbol}`);
+          }
         }
       }
       
@@ -202,9 +213,10 @@ const Dashboard = () => {
               const quote = stockQuotes[symbol];
               if (!quote) return null;
               
-              const price = parseFloat(quote['05. price'] || 0);
-              const change = parseFloat(quote['09. change'] || 0);
-              const changePercent = parseFloat(quote['10. change percent']?.replace('%', '') || 0);
+              // Handle both API format and database format
+              const price = parseFloat(quote['05. price'] || quote.current_price || 0);
+              const change = parseFloat(quote['09. change'] || quote.change_amount || 0);
+              const changePercent = parseFloat(quote['10. change percent']?.replace('%', '') || quote.change_percent?.replace('%', '') || 0);
               
               return (
                 <div key={symbol} className="stock-item">

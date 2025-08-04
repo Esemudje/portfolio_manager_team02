@@ -53,15 +53,28 @@ const DatabaseTest = () => {
       results.cashBalance = { success: false, message: error.message };
     }
 
-    // Test stock quote
+    // Test stock quote with database-first approach
     try {
       const quote = await apiService.getStockQuote('AAPL');
       results.stockQuote = { 
         success: true, 
-        message: `AAPL quote: $${quote['05. price']}` 
+        message: `AAPL quote: $${quote['05. price'] || quote.current_price} (${quote.source || 'API'})` 
       };
     } catch (error) {
-      results.stockQuote = { success: false, message: error.message };
+      // Try database-only as fallback
+      try {
+        const cachedQuote = await apiService.getStockQuoteFromDb('AAPL');
+        if (cachedQuote && !cachedQuote.error) {
+          results.stockQuote = { 
+            success: true, 
+            message: `AAPL cached quote: $${cachedQuote.current_price} (database only)` 
+          };
+        } else {
+          results.stockQuote = { success: false, message: 'No cached data available' };
+        }
+      } catch (dbError) {
+        results.stockQuote = { success: false, message: error.message };
+      }
     }
 
     setTestResults(results);
