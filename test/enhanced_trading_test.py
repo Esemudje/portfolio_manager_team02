@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for enhanced trading system with database-first, API-fallback price fetching
+Test script for enhanced trading system with API-first, database-fallback price fetching
 """
 
 import sys

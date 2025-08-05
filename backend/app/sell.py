@@ -2,16 +2,51 @@ import mysql.connector
 import datetime
 import os
 from typing import List, Dict
+from dotenv import load_dotenv
 from .sellRequest import sellRequest
 from .portfolio import get_portfolio_summary, get_cash_balance, update_cash_balance
 from .market import get_quote
 from .pnl import record_realized_pnl
 
+# Load environment variables from .env file
+load_dotenv()
+
 def get_current_price(symbol: str) -> Dict:
-    """Get current stock price with database-first, API-fallback strategy"""
+    """Get current stock price with API-first, database-fallback strategy"""
     db = None
+    api_error = None
+    db_error = None
+    
     try:
-        # First, try to get price from database (fast)
+        # First, try to get fresh price from API
+        print(f"Fetching fresh price from API for {symbol}...")
+        api_data = get_quote(symbol.upper())
+        
+        if api_data and '05. price' in api_data:
+            current_price = float(api_data['05. price'])
+            
+            # Cache the fresh price in database for future fallback use
+            cache_success = cache_price_in_database(symbol.upper(), api_data)
+            if cache_success:
+                print(f"Fresh price cached in database for {symbol}")
+            
+            print(f"Fresh price from API for {symbol}: ${current_price}")
+            return {
+                "symbol": symbol.upper(),
+                "current_price": current_price,
+                "source": "api",
+                "last_updated": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+        else:
+            api_error = "Invalid API response or missing price data"
+            
+    except Exception as e:
+        api_error = str(e)
+        print(f"API failed for {symbol}: {api_error}")
+    
+    # API failed, try database fallback
+    try:
+        print(f"API failed, trying database fallback for {symbol}...")
         db = get_db_connection()
         if db:
             cursor = db.cursor(dictionary=True)
@@ -24,8 +59,8 @@ def get_current_price(symbol: str) -> Dict:
             """, (symbol.upper(),))
             
             result = cursor.fetchone()
-            if result:
-                print(f"Price found in database for {symbol}: ${result['current_price']}")
+            if result and result['current_price']:
+                print(f"Fallback price found in database for {symbol}: ${result['current_price']}")
                 
                 # Return data in both API format and database format for compatibility
                 change_percent_formatted = f"{result['change_percent']}%" if result['change_percent'] is not None else "0%"
@@ -37,7 +72,7 @@ def get_current_price(symbol: str) -> Dict:
                     "change_amount": float(result['change_amount']) if result['change_amount'] else 0,
                     "change_percent": change_percent_formatted,
                     "volume": int(result['volume']) if result['volume'] else 0,
-                    "source": "database",
+                    "source": "database_fallback",
                     "last_updated": result['updated_at'].strftime('%Y-%m-%d %H:%M:%S') if result['updated_at'] else None,
                     
                     # API format compatibility (for existing frontend code)
@@ -52,33 +87,23 @@ def get_current_price(symbol: str) -> Dict:
                     "09. change": str(result['change_amount']) if result['change_amount'] else "0",
                     "10. change percent": change_percent_formatted
                 }
-        
-        # If not found in database, get from API and cache it
-        print(f"Price not found in database for {symbol}, fetching from API...")
-        api_data = get_quote(symbol.upper())
-        
-        if api_data and '05. price' in api_data:
-            current_price = float(api_data['05. price'])
-            
-            # Cache the price in database for future use
-            cache_price_in_database(symbol.upper(), api_data)
-            
-            print(f"Fresh price from API for {symbol}: ${current_price}")
-            return {
-                "symbol": symbol.upper(),
-                "current_price": current_price,
-                "source": "api",
-                "last_updated": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
+            else:
+                db_error = "No cached data found in database"
         else:
-            return {"error": f"Unable to get price for {symbol} from API"}
+            db_error = "Database connection failed"
             
     except Exception as e:
-        print(f"Error getting current price for {symbol}: {e}")
-        return {"error": str(e)}
+        db_error = str(e)
+        print(f"Database fallback failed for {symbol}: {db_error}")
     finally:
         if db:
             db.close()
+    
+    # Both API and database failed
+    if "rate limit" in api_error.lower() if api_error else False:
+        return {"error": f"Rate limit exceeded and no cached data found in database"}
+    else:
+        return {"error": f"Both API and database failed. API error: {api_error}. Database error: {db_error}"}
 
 def cache_price_in_database(symbol: str, api_data: Dict) -> bool:
     """Cache API price data in database for future use"""
@@ -214,7 +239,7 @@ def sell_stock(sell_request: sellRequest, current_price: float = None, user_id: 
     db = None
     
     try:
-        # Get current price using database-first, API-fallback if not provided
+        # Get current price using API-first, database-fallback if not provided
         if current_price is None:
             price_data = get_current_price(sell_request.symbol)
             if 'error' in price_data:

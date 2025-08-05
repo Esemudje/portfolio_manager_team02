@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+import datetime
 from .market import (
     get_quote, 
     get_stock_overview, 
@@ -22,6 +23,7 @@ from .pnl import (
     get_comprehensive_pnl_report,
     update_unrealized_pnl_history
 )
+from .price_updater import manual_price_update, get_owned_symbols
 
 bp = Blueprint("api", __name__) # helps organize routes 
 
@@ -320,4 +322,43 @@ def update_unrealized_history():
             
     except Exception as e:
         print(f"Error updating unrealized P&L history: {str(e)}")
+        return {"error": str(e)}, 500
+
+# Price Update Endpoints
+@bp.post("/prices/update")
+def manual_update_prices():
+    """Manually trigger price update for all owned stocks"""
+    try:
+        print("API request received to manually update prices")
+        results = manual_price_update()
+        
+        successful_updates = sum(1 for success in results.values() if success)
+        total_stocks = len(results)
+        
+        return jsonify({
+            "status": "completed",
+            "message": f"Updated {successful_updates}/{total_stocks} stocks",
+            "results": results,
+            "timestamp": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+        
+    except Exception as e:
+        print(f"Error in manual price update: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.get("/prices/owned-stocks")
+def get_owned_stocks():
+    """Get list of currently owned stock symbols"""
+    try:
+        print("API request received for owned stocks list")
+        symbols = get_owned_symbols()
+        
+        return jsonify({
+            "owned_stocks": symbols,
+            "count": len(symbols),
+            "timestamp": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+        
+    except Exception as e:
+        print(f"Error getting owned stocks: {str(e)}")
         return {"error": str(e)}, 500
