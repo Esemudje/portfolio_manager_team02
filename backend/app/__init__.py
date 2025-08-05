@@ -11,8 +11,10 @@ def create_app():
     app.register_blueprint(api_bp, url_prefix="/api") # Registering the API blueprint to the app
 
     # Start background price updater for owned stocks
-    print("Starting background price updater...")
-    start_background_price_updater(interval_minutes=3)  # Update every 3 minutes
+    # Only starting if not in reloader process (prevents duplicate threads)
+    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        print("Starting background price updater...")
+        start_background_price_updater(interval_minutes=2)  # Update every 2 minutes
 
     @app.route("/")          # sanity check
     def health():

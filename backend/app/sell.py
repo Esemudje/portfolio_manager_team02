@@ -171,6 +171,78 @@ def get_db_connection():
         print(f"Database connection error: {e}")
         return None
 
+def calculate_remaining_average_cost(symbol: str, sold_shares_info: List[Dict], remaining_quantity: float) -> float:
+    """Calculate the new average cost after FIFO sales"""
+    db = None
+    try:
+        db = get_db_connection()
+        if not db:
+            return 0
+        
+        cursor = db.cursor(dictionary=True)
+        
+        # Get all BUY trades for this symbol in FIFO order (oldest first)
+        cursor.execute("""
+            SELECT price_at_trade, quantity, trade_date 
+            FROM trades 
+            WHERE stock_symbol = %s AND trade_type = 'BUY' 
+            ORDER BY trade_date ASC
+        """, (symbol.upper(),))
+        
+        buy_trades = cursor.fetchall()
+        
+        # Calculate what shares remain after the FIFO sales
+        remaining_shares = []
+        sold_so_far = 0
+        
+        # Track exactly how much was sold from each trade
+        for sold_info in sold_shares_info:
+            sold_so_far += sold_info['quantity']
+        
+        # Now determine what shares remain
+        shares_to_skip = sold_so_far
+        
+        for trade in buy_trades:
+            trade_quantity = float(trade['quantity'])
+            trade_price = float(trade['price_at_trade'])
+            
+            if shares_to_skip >= trade_quantity:
+                # This entire trade was sold
+                shares_to_skip -= trade_quantity
+                continue
+            else:
+                # Part or all of this trade remains
+                remaining_from_this_trade = trade_quantity - shares_to_skip
+                shares_to_skip = 0
+                
+                remaining_shares.append({
+                    'quantity': remaining_from_this_trade,
+                    'price': trade_price
+                })
+        
+        # Calculate weighted average of remaining shares
+        if not remaining_shares:
+            return 0
+        
+        total_cost = sum(share['quantity'] * share['price'] for share in remaining_shares)
+        total_quantity = sum(share['quantity'] for share in remaining_shares)
+        
+        new_average = total_cost / total_quantity if total_quantity > 0 else 0
+        
+        print(f"FIFO Average Calculation for {symbol}:")
+        print(f"  Sold shares: {sold_so_far}")
+        print(f"  Remaining shares: {total_quantity}")
+        print(f"  New average cost: ${new_average:.4f}")
+        
+        return round(new_average, 4)
+        
+    except Exception as e:
+        print(f"Error calculating remaining average cost: {e}")
+        return 0
+    finally:
+        if db:
+            db.close()
+
 def get_fifo_holdings(symbol: str, quantity_to_sell: int) -> List[Dict]:
     """Get holdings in FIFO order (oldest first) for selling"""
     db = None
@@ -264,18 +336,25 @@ def sell_stock(sell_request: sellRequest, current_price: float = None, user_id: 
         
         cursor = db.cursor(dictionary=True)
         
-        # Calculate realized P&L using FIFO
+        # Calculate realized P&L using FIFO and track what was sold
         remaining_to_sell = sell_request.quantity
         total_cost_basis = 0
         total_proceeds = sell_request.quantity * current_price
+        sold_shares_info = []  # Track exactly what was sold for average cost calculation
         
         for holding in available_holdings:
             if remaining_to_sell <= 0:
                 break
                 
             quantity_from_this_holding = min(remaining_to_sell, holding['available_quantity'])
-            cost_basis = quantity_from_this_holding * holding['price_at_trade']  # Now already float
+            cost_basis = quantity_from_this_holding * holding['price_at_trade']
             total_cost_basis += cost_basis
+            
+            # Track what was sold
+            sold_shares_info.append({
+                'quantity': quantity_from_this_holding,
+                'price': holding['price_at_trade']
+            })
             
             remaining_to_sell -= quantity_from_this_holding
         
@@ -294,7 +373,7 @@ def sell_stock(sell_request: sellRequest, current_price: float = None, user_id: 
         # Record realized P&L in profit_and_loss table
         record_realized_pnl(sell_request.symbol, trade_id, realized_pnl)
         
-        # Update holdings
+        # Update holdings with correct FIFO average cost calculation
         cursor.execute("""
             SELECT quantity, average_cost FROM holdings WHERE stock_symbol = %s
         """, (sell_request.symbol,))
@@ -311,11 +390,15 @@ def sell_stock(sell_request: sellRequest, current_price: float = None, user_id: 
                 """, (sell_request.symbol,))
                 print("Holding removed completely")
             else:
-                # Update holding quantity (average cost remains the same)
+                # Calculate new average cost based on remaining shares using FIFO
+                new_average_cost = calculate_remaining_average_cost(
+                    sell_request.symbol, sold_shares_info, new_quantity
+                )
+                
                 cursor.execute("""
-                    UPDATE holdings SET quantity = %s WHERE stock_symbol = %s
-                """, (new_quantity, sell_request.symbol))
-                print("Holding updated")
+                    UPDATE holdings SET quantity = %s, average_cost = %s WHERE stock_symbol = %s
+                """, (new_quantity, new_average_cost, sell_request.symbol))
+                print(f"Holding updated: {new_quantity} shares @ ${new_average_cost:.4f} avg cost (was ${holding_result['average_cost']:.4f})")
         
         db.commit()
         
