@@ -1,8 +1,10 @@
 # Portfolio Manager
 
-A hackathon project to simulate stock## Getting Started
-
-### Quick Start with Docker (Coming Soon)
+A hackathon project to simulate stock## Getting Start| Front‑end   | React with Javascript    | Build the user interface and handle page routing                  |
+| Back‑end    | Flask (Python)           | Provide REST endpoints for authentication, trading, and analytics |
+| Data Store  | MySQL                    | Persist user accounts, trades, and historic profit & loss         |
+| Market Data | yFinance                 | Retrieve open, close, and news data for stocks                    |
+| Hosting     | Render                   | Deploy a free demo for testing                                    |## Quick Start with Docker (Coming Soon)
 ```bash
 # Clone the repository
 git clone https://github.com/your‑team/portfolio‑manager.git
@@ -30,7 +32,6 @@ docker compose up
 
 3. Set up environment variables (create `.env` file):
    ```
-   ALPHA_VANTAGE_KEY=your_api_key_here
    MYSQL_HOST=localhost
    MYSQL_USER=root
    MYSQL_PASSWORD=your_password

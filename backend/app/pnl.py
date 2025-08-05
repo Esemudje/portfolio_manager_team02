@@ -2,10 +2,9 @@ import mysql.connector
 import datetime
 import os
 from typing import Dict, List, Optional
-from .config import Config
 
 def get_db_connection():
-    """Get database connection using config"""
+    """Get database connection using environment variables"""
     try:
         connection = mysql.connector.connect(
             host=os.getenv('MYSQL_HOST'),

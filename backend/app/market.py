@@ -36,7 +36,7 @@ def get_quote(symbol: str) -> Dict:
         # Get the latest trading day
         latest_trading_day = hist.index[-1].strftime('%Y-%m-%d')
         
-        # Format data to match Alpha Vantage format for compatibility
+        # Format data for API compatibility
         result = {
             "01. symbol": symbol.upper(),
             "02. open": str(open_price),
@@ -174,7 +174,7 @@ def get_intraday_data(symbol: str, interval: str = "5min") -> Dict:
             print(f"No intraday data found for symbol: {symbol}")
             return {}
         
-        # Convert to Alpha Vantage format
+        # Convert to API format
         time_series = {}
         for timestamp, row in hist.iterrows():
             time_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
@@ -218,7 +218,7 @@ def get_daily_data(symbol: str) -> Dict:
             print(f"No daily data found for symbol: {symbol}")
             return {}
         
-        # Convert to Alpha Vantage format
+        # Convert to API format
         time_series = {}
         for date, row in hist.iterrows():
             date_str = date.strftime('%Y-%m-%d')

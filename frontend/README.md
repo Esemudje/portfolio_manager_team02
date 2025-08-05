@@ -132,7 +132,7 @@ To complete the integration with your backend:
 ## Development Notes
 
 - The app currently uses mock data for portfolio and holdings
-- Real-time stock data comes from your Alpha Vantage integration
+- Real-time stock data comes from your yFinance integration
 - Error handling includes network timeouts and API rate limits
 - All currency values are formatted consistently
 - The design is mobile-responsive
@@ -141,7 +141,7 @@ To complete the integration with your backend:
 
 **API Connection Issues:**
 - Ensure your Flask backend is running on port 5000
-- Check the Alpha Vantage API key is configured
+- Check the database connection is configured
 - Verify CORS settings if needed
 
 **Build Issues:**

@@ -3,7 +3,6 @@ import datetime
 import os
 from typing import List, Dict
 from .sellRequest import sellRequest
-from .config import Config
 from .portfolio import get_portfolio_summary, get_cash_balance, update_cash_balance
 from .market import get_quote
 from .pnl import record_realized_pnl
@@ -134,7 +133,7 @@ def cache_price_in_database(symbol: str, api_data: Dict) -> bool:
             db.close()
 
 def get_db_connection():
-    """Get database connection using config"""
+    """Get database connection using environment variables"""
     try:
         connection = mysql.connector.connect(
             host=os.getenv('MYSQL_HOST'),

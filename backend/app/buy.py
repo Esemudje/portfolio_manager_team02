@@ -3,12 +3,11 @@ import datetime
 import os
 from typing import Dict, Optional
 from .buyRequest import buyRequest
-from .config import Config
 from .portfolio import get_cash_balance, update_cash_balance
 from .market import get_quote
 
 def get_db_connection():
-    """Get database connection using config"""
+    """Get database connection using environment variables"""
     try:
         connection = mysql.connector.connect(
             host=os.getenv('MYSQL_HOST'),

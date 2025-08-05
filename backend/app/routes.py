@@ -4,8 +4,6 @@ from .market import (
     get_stock_overview, 
     get_intraday_data, 
     get_daily_data, 
-    get_news_sentiment, 
-    get_company_earnings,
     test_api_connection
 )
 from .portfolio import (
@@ -101,37 +99,6 @@ def stock_daily(symbol):
         return jsonify(data)
     except Exception as e:
         print(f"Error getting daily data for {symbol}: {str(e)}")
-        return {"error": str(e)}, 500
-
-@bp.get("/stocks/<symbol>/news")
-def stock_news(symbol):
-    """Get news and sentiment for a stock"""
-    try:
-        topics = request.args.get('topics')
-        print(f"API request received for news: {symbol}")
-        data = get_news_sentiment(symbol.upper(), topics)
-        if not data:
-            print(f"No news data found for symbol: {symbol}")
-            return {"error": "Symbol not found"}, 404
-        print(f"News data sent for: {symbol}")
-        return jsonify(data)
-    except Exception as e:
-        print(f"Error getting news for {symbol}: {str(e)}")
-        return {"error": str(e)}, 500
-
-@bp.get("/stocks/<symbol>/earnings")
-def stock_earnings(symbol):
-    """Get earnings data for a stock"""
-    try:
-        print(f"🔍 API request received for earnings: {symbol}")
-        data = get_company_earnings(symbol.upper())
-        if not data:
-            print(f"No earnings data found for symbol: {symbol}")
-            return {"error": "Symbol not found"}, 404
-        print(f"Earnings data sent for: {symbol}")
-        return jsonify(data)
-    except Exception as e:
-        print(f"Error getting earnings for {symbol}: {str(e)}")
         return {"error": str(e)}, 500
 
 @bp.get("/test-connection")

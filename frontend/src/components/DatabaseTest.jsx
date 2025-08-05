@@ -126,7 +126,7 @@ const DatabaseTest = () => {
         <ul>
           <li>Make sure your Flask backend is running on port 5000</li>
           <li>Ensure your MySQL database is running with the correct schema</li>
-          <li>Verify your Alpha Vantage API key is configured</li>
+          <li>Verify your database connection is configured properly</li>
           <li>Check that you have some test data populated in your database</li>
         </ul>
       </div>
