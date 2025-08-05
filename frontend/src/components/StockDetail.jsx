@@ -10,8 +10,7 @@ const StockDetail = () => {
     quote: null,
     overview: null,
     dailyData: null,
-    intradayData: null,
-    news: null
+    intradayData: null
   });
   const [activeTab, setActiveTab] = useState('overview');
   const [chartType, setChartType] = useState('price'); // 'price', 'volume', 'intraday'
@@ -32,12 +31,11 @@ const StockDetail = () => {
       
       // Fetch multiple endpoints in parallel with intelligent data fetching
       // Priority: 1. Database-cached data, 2. Fresh API data when needed
-      const [quote, overview, dailyData, intradayData, news] = await Promise.allSettled([
+      const [quote, overview, dailyData, intradayData] = await Promise.allSettled([
         apiService.getStockQuote(stockSymbol), // Backend handles database-first
         apiService.getStockOverview(stockSymbol),
         apiService.getDailyData(stockSymbol),
-        apiService.getIntradayData(stockSymbol, '5min'),
-        apiService.getNews(stockSymbol)
+        apiService.getIntradayData(stockSymbol, '5min')
       ]);
 
       // Handle quote with fallback to cached data
@@ -61,8 +59,7 @@ const StockDetail = () => {
         quote: quoteData,
         overview: overview.status === 'fulfilled' ? overview.value : null,
         dailyData: dailyData.status === 'fulfilled' ? dailyData.value : null,
-        intradayData: intradayData.status === 'fulfilled' ? intradayData.value : null,
-        news: news.status === 'fulfilled' ? news.value : null
+        intradayData: intradayData.status === 'fulfilled' ? intradayData.value : null
       });
       
     } catch (err) {
@@ -177,7 +174,7 @@ const StockDetail = () => {
     );
   }
 
-  const { quote, overview, news } = stockData;
+  const { quote, overview } = stockData;
   const chartData = getChartData();
   const fallbackChartData = getFallbackChartData();
 
@@ -561,12 +558,6 @@ const StockDetail = () => {
           >
             Financials
           </button>
-          <button
-            className={`btn ${activeTab === 'news' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setActiveTab('news')}
-          >
-            News
-          </button>
         </div>
 
         {activeTab === 'overview' && overview && (
@@ -637,56 +628,6 @@ const StockDetail = () => {
                 </table>
               </div>
             </div>
-          </div>
-        )}
-
-        {activeTab === 'news' && (
-          <div>
-            {news && news.feed && news.feed.length > 0 ? (
-              <div style={{ display: 'grid', gap: '1.5rem' }}>
-                {news.feed.slice(0, 10).map((article, index) => (
-                  <div key={index} style={{ 
-                    padding: '1.5rem', 
-                    border: '1px solid #e5e7eb', 
-                    borderRadius: '0.5rem',
-                    backgroundColor: '#fafafa'
-                  }}>
-                    <h4 style={{ marginBottom: '0.5rem' }}>
-                      <a 
-                        href={article.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{ color: '#667eea', textDecoration: 'none' }}
-                      >
-                        {article.title}
-                      </a>
-                    </h4>
-                    <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                      {article.source} • {new Date(article.time_published).toLocaleDateString()}
-                    </p>
-                    <p style={{ color: '#374151', lineHeight: '1.6' }}>
-                      {article.summary}
-                    </p>
-                    {article.overall_sentiment_label && (
-                      <span 
-                        className={`btn ${
-                          article.overall_sentiment_label === 'Positive' ? 'btn-success' : 
-                          article.overall_sentiment_label === 'Negative' ? 'btn-danger' : 
-                          'btn-secondary'
-                        }`}
-                        style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', marginTop: '0.5rem' }}
-                      >
-                        {article.overall_sentiment_label} Sentiment
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
-                No news available for this stock.
-              </p>
-            )}
           </div>
         )}
       </div>

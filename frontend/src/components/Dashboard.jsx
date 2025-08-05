@@ -12,8 +12,23 @@ const Dashboard = () => {
   });
   const [watchlist] = useState(['AAPL', 'GOOGL', 'AMZN', 'TSLA', 'MSFT']);
   const [stockQuotes, setStockQuotes] = useState({});
+  const [marketNews, setMarketNews] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const fetchMarketNews = useCallback(async () => {
+    try {
+      setNewsLoading(true);
+      
+      // Fetch news related to watchlist stocks (TODO: Jay code here)
+      
+    } catch (err) {
+      console.error('Failed to fetch market news:', err);
+    } finally {
+      setNewsLoading(false);
+    }
+  }, []);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -83,6 +98,9 @@ const Dashboard = () => {
         dayChange: 0, // Could be calculated from daily performance
         holdings
       });
+
+      // Fetch market news from top watchlist stocks
+      fetchMarketNews();
       
     } catch (err) {
       setError('Failed to fetch dashboard data');
@@ -90,7 +108,7 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [watchlist]);
+  }, [watchlist, fetchMarketNews]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -238,6 +256,81 @@ const Dashboard = () => {
             })}
           </div>
         </div>
+      </div>
+
+      {/* Market News Section */}
+      <div className="card" style={{ marginTop: '2rem' }}>
+        <div className="card-header">
+          <h2 className="card-title">Market News</h2>
+          <button 
+            onClick={fetchMarketNews} 
+            className="btn btn-secondary"
+            disabled={newsLoading}
+          >
+            {newsLoading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+        
+        {newsLoading ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+            Loading market news...
+          </div>
+        ) : marketNews.length > 0 ? (
+          <div style={{ display: 'grid', gap: '1.5rem', padding: '1rem' }}>
+            {marketNews.map((article, index) => (
+              <div key={index} style={{ 
+                padding: '1.5rem', 
+                border: '1px solid #e5e7eb', 
+                borderRadius: '0.5rem',
+                backgroundColor: '#fafafa'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                  <h4 style={{ marginBottom: '0.5rem', flex: 1 }}>
+                    <a 
+                      href={article.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ color: '#667eea', textDecoration: 'none' }}
+                    >
+                      {article.title}
+                    </a>
+                  </h4>
+                  {article.relatedStock && (
+                    <Link 
+                      to={`/stock/${article.relatedStock}`}
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', marginLeft: '1rem' }}
+                    >
+                      {article.relatedStock}
+                    </Link>
+                  )}
+                </div>
+                <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                  {article.source} • {new Date(article.time_published).toLocaleDateString()}
+                </p>
+                <p style={{ color: '#374151', lineHeight: '1.6' }}>
+                  {article.summary}
+                </p>
+                {article.overall_sentiment_label && (
+                  <span 
+                    className={`btn ${
+                      article.overall_sentiment_label === 'Positive' ? 'btn-success' : 
+                      article.overall_sentiment_label === 'Negative' ? 'btn-danger' : 
+                      'btn-secondary'
+                    }`}
+                    style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', marginTop: '0.5rem' }}
+                  >
+                    {article.overall_sentiment_label} Sentiment
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
+            No market news available. Click refresh to try again.
+          </p>
+        )}
       </div>
     </div>
   );
