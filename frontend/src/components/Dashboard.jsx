@@ -35,10 +35,11 @@ const Dashboard = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch real portfolio data from database
-      const [portfolioResponse, cashResponse] = await Promise.allSettled([
+      // Fetch real portfolio data and comprehensive P&L data from database
+      const [portfolioResponse, cashResponse, comprehensivePnLResponse] = await Promise.allSettled([
         apiService.getPortfolio(),
-        apiService.getBalance()
+        apiService.getBalance(),
+        apiService.getComprehensivePnL() // Get comprehensive P&L (realized + unrealized) for all holdings
       ]);
 
       // Get portfolio data
@@ -46,15 +47,36 @@ const Dashboard = () => {
       let totalValue = 0;
       let totalPL = 0;
       
+      // Get comprehensive P&L data by symbol for mapping
+      let comprehensivePnLBySymbol = {};
+      if (comprehensivePnLResponse.status === 'fulfilled' && comprehensivePnLResponse.value.holdings) {
+        comprehensivePnLResponse.value.holdings.forEach(item => {
+          comprehensivePnLBySymbol[item.symbol] = {
+            realizedPnl: parseFloat(item.realized_pnl || 0),
+            unrealizedPnl: parseFloat(item.unrealized_pnl || 0),
+            totalPnl: parseFloat(item.total_pnl || 0),
+            totalReturn: parseFloat(item.total_return || 0),
+            totalReturnPercent: parseFloat(item.total_return_percent || 0)
+          };
+        });
+      }
+      
       if (portfolioResponse.status === 'fulfilled' && portfolioResponse.value.holdings) {
-        holdings = portfolioResponse.value.holdings.map(holding => ({
-          symbol: holding.stock_symbol,
-          quantity: parseFloat(holding.quantity),
-          averageCost: parseFloat(holding.average_cost),
-          currentPrice: parseFloat(holding.current_price || holding.average_cost), // Use database current price
-          marketValue: parseFloat(holding.market_value || 0),
-          unrealizedPnl: parseFloat(holding.unrealized_pnl || 0)
-        }));
+        holdings = portfolioResponse.value.holdings.map(holding => {
+          const comprehensivePnL = comprehensivePnLBySymbol[holding.stock_symbol] || {};
+          return {
+            symbol: holding.stock_symbol,
+            quantity: parseFloat(holding.quantity),
+            averageCost: parseFloat(holding.average_cost),
+            currentPrice: parseFloat(holding.current_price || holding.average_cost), // Use database current price
+            marketValue: parseFloat(holding.market_value || 0),
+            unrealizedPnl: comprehensivePnL.unrealizedPnl || parseFloat(holding.unrealized_pnl || 0),
+            realizedPnl: comprehensivePnL.realizedPnl || 0,
+            totalPnl: comprehensivePnL.totalPnl || 0,
+            totalReturn: comprehensivePnL.totalReturn || 0,
+            totalReturnPercent: comprehensivePnL.totalReturnPercent || 0
+          };
+        });
         
         if (portfolioResponse.value.summary) {
           totalValue = portfolioResponse.value.summary.total_portfolio_value || 0;
@@ -185,14 +207,20 @@ const Dashboard = () => {
                     <th>Avg Cost</th>
                     <th>Current Price</th>
                     <th>Market Value</th>
-                    <th>P&L</th>
+                    <th>Unrealized P&L</th>
+                    <th>Realized P&L</th>
+                    <th>Total P&L</th>
+                    <th>Total Return %</th>
                   </tr>
                 </thead>
                 <tbody>
                   {portfolioData.holdings.map((holding, index) => {
-                    // Use pre-calculated values from database
+                    // Use pre-calculated values from database and comprehensive P&L
                     const marketValue = holding.marketValue;
-                    const pl = holding.unrealizedPnl;
+                    const unrealizedPnl = holding.unrealizedPnl;
+                    const realizedPnl = holding.realizedPnl;
+                    const totalPnl = holding.totalPnl;
+                    const totalReturnPercent = holding.totalReturnPercent;
                     
                     return (
                       <tr key={index}>
@@ -205,8 +233,17 @@ const Dashboard = () => {
                         <td>{formatCurrency(holding.averageCost)}</td>
                         <td>{formatCurrency(holding.currentPrice)}</td>
                         <td>{formatCurrency(marketValue)}</td>
-                        <td className={pl >= 0 ? 'positive' : 'negative'}>
-                          {formatCurrency(pl)}
+                        <td className={unrealizedPnl >= 0 ? 'positive' : 'negative'}>
+                          {formatCurrency(unrealizedPnl)}
+                        </td>
+                        <td className={realizedPnl >= 0 ? 'positive' : 'negative'}>
+                          {formatCurrency(realizedPnl)}
+                        </td>
+                        <td className={totalPnl >= 0 ? 'positive' : 'negative'}>
+                          <strong>{formatCurrency(totalPnl)}</strong>
+                        </td>
+                        <td className={totalReturnPercent >= 0 ? 'positive' : 'negative'}>
+                          <strong>{totalReturnPercent.toFixed(2)}%</strong>
                         </td>
                       </tr>
                     );

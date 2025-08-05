@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ComposedChart } from 'recharts';
@@ -14,20 +14,18 @@ const StockDetail = () => {
   });
   const [activeTab, setActiveTab] = useState('overview');
   const [chartType, setChartType] = useState('price'); // 'price', 'volume', 'intraday'
-  const [chartTimeRange, setChartTimeRange] = useState('30d'); // '1d', '7d', '30d', '90d'
+  const [chartTimeRange, setChartTimeRange] = useState('30d'); // '1d', '7d', '30d', '90d', '6m', '1y', '2y'
+  const [intradayInterval, setIntradayInterval] = useState('60min'); // '1min', '5min', '10min', '15min', '30min', '60min'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (symbol) {
-      fetchStockData(symbol);
-    }
-  }, [symbol]);
-
-  const fetchStockData = async (stockSymbol) => {
+  const fetchStockData = useCallback(async (stockSymbol) => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Determine interval for intraday data based on user selection
+      const interval = chartType === 'intraday' ? intradayInterval : '5min';
       
       // Fetch multiple endpoints in parallel with intelligent data fetching
       // Priority: 1. Database-cached data, 2. Fresh API data when needed
@@ -35,7 +33,7 @@ const StockDetail = () => {
         apiService.getStockQuote(stockSymbol), // Backend handles database-first
         apiService.getStockOverview(stockSymbol),
         apiService.getDailyData(stockSymbol),
-        apiService.getIntradayData(stockSymbol, '5min')
+        apiService.getIntradayData(stockSymbol, interval)
       ]);
 
       // Handle quote with fallback to cached data
@@ -68,7 +66,13 @@ const StockDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [chartType, intradayInterval]);
+
+  useEffect(() => {
+    if (symbol) {
+      fetchStockData(symbol);
+    }
+  }, [symbol, chartTimeRange, intradayInterval, fetchStockData]);
 
   const formatCurrency = (amount) => {
     if (!amount) return 'N/A';
@@ -88,11 +92,25 @@ const StockDetail = () => {
     return number.toFixed(2);
   };
 
-  const prepareDailyChartData = (days = 30) => {
+  const prepareDailyChartData = () => {
     if (!stockData.dailyData || !stockData.dailyData['Time Series (Daily)']) {
       return [];
     }
 
+    // Convert time range to number of days
+    const getDaysFromRange = (range) => {
+      switch (range) {
+        case '7d': return 7;
+        case '30d': return 30;
+        case '90d': return 90;
+        case '6m': return 180;
+        case '1y': return 365;
+        case '2y': return 730;
+        default: return 30;
+      }
+    };
+
+    const days = getDaysFromRange(chartTimeRange);
     const timeSeries = stockData.dailyData['Time Series (Daily)'];
     return Object.entries(timeSeries)
       .slice(0, days) // Last X days
@@ -108,13 +126,40 @@ const StockDetail = () => {
   };
 
   const prepareIntradayChartData = () => {
-    if (!stockData.intradayData || !stockData.intradayData['Time Series (5min)']) {
+    if (!stockData.intradayData) {
       return [];
     }
 
-    const timeSeries = stockData.intradayData['Time Series (5min)'];
+    // Map intervals to their API keys
+    const intervalMap = {
+      '1min': 'Time Series (1min)',
+      '5min': 'Time Series (5min)',
+      '10min': 'Time Series (10min)',
+      '15min': 'Time Series (15min)',
+      '30min': 'Time Series (30min)',
+      '60min': 'Time Series (60min)'
+    };
+
+    const timeSeriesKey = intervalMap[intradayInterval];
+    if (!stockData.intradayData[timeSeriesKey]) {
+      return [];
+    }
+
+    const timeSeries = stockData.intradayData[timeSeriesKey];
+    
+    // Calculate appropriate slice size based on interval
+    const intervalsPerHour = {
+      '1min': 60, '5min': 12, '10min': 6, 
+      '15min': 4, '30min': 2, '60min': 1
+    };
+    
+    const sliceSize = Math.min(
+      78, // Cap at 78 points for readability
+      6.5 * intervalsPerHour[intradayInterval] // Trading day length
+    );
+
     return Object.entries(timeSeries)
-      .slice(0, 78) // Last trading day (6.5 hours * 12 intervals per hour)
+      .slice(0, sliceSize)
       .reverse()
       .map(([timestamp, data]) => ({
         time: timestamp,
@@ -248,56 +293,77 @@ const StockDetail = () => {
             
             {/* Chart Controls - only show when we have historical data */}
             {chartData.length > 0 && (
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 {/* Chart Type Selector */}
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    className={`btn ${chartType === 'price' ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setChartType('price')}
-                    style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Chart Type</label>
+                  <select
+                    value={chartType}
+                    onChange={(e) => setChartType(e.target.value)}
+                    style={{
+                      padding: '0.5rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.375rem',
+                      backgroundColor: 'white',
+                      fontSize: '0.9rem',
+                      minWidth: '120px'
+                    }}
                   >
-                    Price
-                  </button>
-                  <button
-                    className={`btn ${chartType === 'volume' ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setChartType('volume')}
-                    style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
-                  >
-                    Volume
-                  </button>
-                  <button
-                    className={`btn ${chartType === 'intraday' ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setChartType('intraday')}
-                    style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
-                  >
-                    Intraday
-                  </button>
+                    <option value="price">Price</option>
+                    <option value="volume">Volume</option>
+                    <option value="intraday">Intraday</option>
+                  </select>
                 </div>
                 
                 {/* Time Range Selector (only for daily charts) */}
                 {chartType !== 'intraday' && (
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      className={`btn ${chartTimeRange === '7d' ? 'btn-primary' : 'btn-secondary'}`}
-                      onClick={() => setChartTimeRange('7d')}
-                      style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Time Range</label>
+                    <select
+                      value={chartTimeRange}
+                      onChange={(e) => setChartTimeRange(e.target.value)}
+                      style={{
+                        padding: '0.5rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.375rem',
+                        backgroundColor: 'white',
+                        fontSize: '0.9rem',
+                        minWidth: '120px'
+                      }}
                     >
-                      7D
-                    </button>
-                    <button
-                      className={`btn ${chartTimeRange === '30d' ? 'btn-primary' : 'btn-secondary'}`}
-                      onClick={() => setChartTimeRange('30d')}
-                      style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
+                      <option value="7d">7 Days</option>
+                      <option value="30d">30 Days</option>
+                      <option value="90d">90 Days</option>
+                      <option value="6m">6 Months</option>
+                      <option value="1y">1 Year</option>
+                      <option value="2y">2 Years</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Intraday Interval Selector (only for intraday charts) */}
+                {chartType === 'intraday' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <label style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 'bold' }}>Interval</label>
+                    <select
+                      value={intradayInterval}
+                      onChange={(e) => setIntradayInterval(e.target.value)}
+                      style={{
+                        padding: '0.5rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.375rem',
+                        backgroundColor: 'white',
+                        fontSize: '0.9rem',
+                        minWidth: '120px'
+                      }}
                     >
-                      30D
-                    </button>
-                    <button
-                      className={`btn ${chartTimeRange === '90d' ? 'btn-primary' : 'btn-secondary'}`}
-                      onClick={() => setChartTimeRange('90d')}
-                      style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
-                    >
-                      90D
-                    </button>
+                      <option value="1min">1 Minute</option>
+                      <option value="5min">5 Minutes</option>
+                      <option value="10min">10 Minutes</option>
+                      <option value="15min">15 Minutes</option>
+                      <option value="30min">30 Minutes</option>
+                      <option value="60min">1 Hour</option>
+                    </select>
                   </div>
                 )}
               </div>
