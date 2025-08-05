@@ -7,6 +7,8 @@ const Dashboard = () => {
     totalValue: 0,
     totalCash: 10000, // Starting with $10,000 virtual cash
     totalPL: 0,
+    totalRealizedPL: 0,
+    totalUnrealizedPL: 0,
     dayChange: 0,
     holdings: []
   });
@@ -46,19 +48,32 @@ const Dashboard = () => {
       let holdings = [];
       let totalValue = 0;
       let totalPL = 0;
+      let totalRealizedPL = 0;
+      let totalUnrealizedPL = 0;
       
       // Get comprehensive P&L data by symbol for mapping
       let comprehensivePnLBySymbol = {};
-      if (comprehensivePnLResponse.status === 'fulfilled' && comprehensivePnLResponse.value.holdings) {
-        comprehensivePnLResponse.value.holdings.forEach(item => {
-          comprehensivePnLBySymbol[item.symbol] = {
-            realizedPnl: parseFloat(item.realized_pnl || 0),
-            unrealizedPnl: parseFloat(item.unrealized_pnl || 0),
-            totalPnl: parseFloat(item.total_pnl || 0),
-            totalReturn: parseFloat(item.total_return || 0),
-            totalReturnPercent: parseFloat(item.total_return_percent || 0)
-          };
-        });
+      if (comprehensivePnLResponse.status === 'fulfilled' && comprehensivePnLResponse.value) {
+        const pnlData = comprehensivePnLResponse.value;
+        
+        // Extract totals from summary
+        if (pnlData.summary) {
+          totalRealizedPL = parseFloat(pnlData.summary.realized_pnl || 0);
+          totalUnrealizedPL = parseFloat(pnlData.summary.unrealized_pnl || 0);
+        }
+        
+        // Extract per-symbol data from unrealized holdings
+        if (pnlData.unrealized && pnlData.unrealized.holdings) {
+          pnlData.unrealized.holdings.forEach(item => {
+            comprehensivePnLBySymbol[item.symbol] = {
+              realizedPnl: 0, // Realized PnL is per-stock specific, not available in current structure
+              unrealizedPnl: parseFloat(item.unrealized_pnl || 0),
+              totalPnl: parseFloat(item.unrealized_pnl || 0), // For now, only unrealized available per-stock
+              totalReturn: 0,
+              totalReturnPercent: parseFloat(item.unrealized_pnl_percent || 0)
+            };
+          });
+        }
       }
       
       if (portfolioResponse.status === 'fulfilled' && portfolioResponse.value.holdings) {
@@ -117,6 +132,8 @@ const Dashboard = () => {
         totalValue,
         totalCash: cashBalance,
         totalPL,
+        totalRealizedPL,
+        totalUnrealizedPL,
         dayChange: 0, // Could be calculated from daily performance
         holdings
       });
@@ -186,6 +203,16 @@ const Dashboard = () => {
           <div className="stat-label">
             Total P&L ({formatPercent(portfolioData.totalPL)})
           </div>
+          {portfolioData.totalRealizedPL !== undefined && portfolioData.totalUnrealizedPL !== undefined && (
+            <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>
+              <div className={portfolioData.totalUnrealizedPL >= 0 ? 'positive' : 'negative'}>
+                Unrealized: {formatCurrency(portfolioData.totalUnrealizedPL)}
+              </div>
+              <div className={portfolioData.totalRealizedPL >= 0 ? 'positive' : 'negative'}>
+                Realized: {formatCurrency(portfolioData.totalRealizedPL)}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -207,20 +234,14 @@ const Dashboard = () => {
                     <th>Avg Cost</th>
                     <th>Current Price</th>
                     <th>Market Value</th>
-                    <th>Unrealized P&L</th>
-                    <th>Realized P&L</th>
-                    <th>Total P&L</th>
-                    <th>Total Return %</th>
+                    <th>P&L</th>
                   </tr>
                 </thead>
                 <tbody>
                   {portfolioData.holdings.map((holding, index) => {
-                    // Use pre-calculated values from database and comprehensive P&L
+                    // Use pre-calculated values from database
                     const marketValue = holding.marketValue;
-                    const unrealizedPnl = holding.unrealizedPnl;
-                    const realizedPnl = holding.realizedPnl;
-                    const totalPnl = holding.totalPnl;
-                    const totalReturnPercent = holding.totalReturnPercent;
+                    const pl = holding.unrealizedPnl;
                     
                     return (
                       <tr key={index}>
@@ -233,17 +254,8 @@ const Dashboard = () => {
                         <td>{formatCurrency(holding.averageCost)}</td>
                         <td>{formatCurrency(holding.currentPrice)}</td>
                         <td>{formatCurrency(marketValue)}</td>
-                        <td className={unrealizedPnl >= 0 ? 'positive' : 'negative'}>
-                          {formatCurrency(unrealizedPnl)}
-                        </td>
-                        <td className={realizedPnl >= 0 ? 'positive' : 'negative'}>
-                          {formatCurrency(realizedPnl)}
-                        </td>
-                        <td className={totalPnl >= 0 ? 'positive' : 'negative'}>
-                          <strong>{formatCurrency(totalPnl)}</strong>
-                        </td>
-                        <td className={totalReturnPercent >= 0 ? 'positive' : 'negative'}>
-                          <strong>{totalReturnPercent.toFixed(2)}%</strong>
+                        <td className={pl >= 0 ? 'positive' : 'negative'}>
+                          {formatCurrency(pl)}
                         </td>
                       </tr>
                     );
