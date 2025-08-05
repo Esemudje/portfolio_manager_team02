@@ -20,8 +20,7 @@ from .sellRequest import sellRequest
 from .pnl import (
     calculate_unrealized_pnl, 
     get_realized_pnl_summary, 
-    get_comprehensive_pnl_report,
-    update_unrealized_pnl_history
+    get_comprehensive_pnl_report
 )
 from .price_updater import manual_price_update, get_owned_symbols
 
@@ -306,22 +305,6 @@ def comprehensive_pnl():
         return jsonify(data)
     except Exception as e:
         print(f"Error getting comprehensive P&L: {str(e)}")
-        return {"error": str(e)}, 500
-
-@bp.post("/pnl/update-unrealized")
-def update_unrealized_history():
-    """Update unrealized P&L history (for periodic snapshots)"""
-    try:
-        print("API request received to update unrealized P&L history")
-        success = update_unrealized_pnl_history()
-        
-        if success:
-            return jsonify({"status": "success", "message": "Unrealized P&L history updated"})
-        else:
-            return {"error": "Failed to update unrealized P&L history"}, 500
-            
-    except Exception as e:
-        print(f"Error updating unrealized P&L history: {str(e)}")
         return {"error": str(e)}, 500
 
 # Price Update Endpoints

@@ -1,7 +1,8 @@
 from flask import Flask, jsonify, request
 import os
 from .buyRequest import buyRequest
-from .buy import buy_stock, test_database_connection
+from .buy import buy_stock
+from .utils import test_database_connection
 from .price_updater import start_background_price_updater, manual_price_update
 
 def create_app():

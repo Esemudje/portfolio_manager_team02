@@ -1,25 +1,11 @@
 import mysql.connector
 import datetime
-import os
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
+from .utils import get_db_connection
 
 # Load environment variables from .env file
 load_dotenv()
-
-def get_db_connection():
-    """Get database connection using environment variables"""
-    try:
-        connection = mysql.connector.connect(
-            host=os.getenv('MYSQL_HOST'),
-            user=os.getenv('MYSQL_USER'),
-            password=os.getenv('MYSQL_PASSWORD'),
-            database=os.getenv('MYSQL_DB')
-        )
-        return connection
-    except Exception as e:
-        print(f"Database connection error: {e}")
-        return None
 
 def record_realized_pnl(stock_symbol: str, trade_id: int, realized_pnl: float) -> bool:
     """Record realized P&L in the profit_and_loss table"""
@@ -270,37 +256,3 @@ def get_comprehensive_pnl_report(stock_symbol: str = None, days: int = 30) -> Di
     except Exception as e:
         print(f"Error generating comprehensive P&L report: {e}")
         return {"error": str(e)}
-
-def update_unrealized_pnl_history():
-    """Update unrealized P&L history in profit_and_loss table (for tracking over time)"""
-    db = None
-    try:
-        db = get_db_connection()
-        if not db:
-            return False
-        
-        cursor = db.cursor(dictionary=True)
-        
-        # Get current unrealized P&L for all holdings
-        unrealized_data = calculate_unrealized_pnl()
-        
-        if 'error' in unrealized_data:
-            return False
-        
-        # Record unrealized P&L for each holding
-        for holding in unrealized_data['holdings']:
-            cursor.execute("""
-                INSERT INTO profit_and_loss (stock_symbol, trade_id, unrealized_pnl, calculation_date)
-                VALUES (%s, %s, %s, %s)
-            """, (holding['symbol'], None, holding['unrealized_pnl'], datetime.datetime.now()))
-        
-        db.commit()
-        print(f"Updated unrealized P&L history for {len(unrealized_data['holdings'])} holdings")
-        return True
-        
-    except Exception as e:
-        print(f"Error updating unrealized P&L history: {e}")
-        return False
-    finally:
-        if db:
-            db.close()

@@ -1,28 +1,14 @@
 import mysql.connector
 import datetime
-import os
 import time
 import threading
 from typing import List, Dict
 from dotenv import load_dotenv
 from .market import get_quote
+from .utils import get_db_connection, cache_price_in_database
 
 # Load environment variables from .env file
 load_dotenv()
-
-def get_db_connection():
-    """Get database connection using environment variables"""
-    try:
-        connection = mysql.connector.connect(
-            host=os.getenv('MYSQL_HOST'),
-            user=os.getenv('MYSQL_USER'),
-            password=os.getenv('MYSQL_PASSWORD'),
-            database=os.getenv('MYSQL_DB')
-        )
-        return connection
-    except Exception as e:
-        print(f"Database connection error: {e}")
-        return None
 
 def get_owned_symbols() -> List[str]:
     """Get list of stock symbols that are currently owned (in holdings)"""

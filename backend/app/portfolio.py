@@ -1,24 +1,10 @@
 import mysql.connector
-import os
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
+from .utils import get_db_connection
 
 # Load environment variables from .env file
 load_dotenv()
-
-def get_db_connection():
-    """Get database connection using environment variables"""
-    try:
-        connection = mysql.connector.connect(
-            host=os.getenv('MYSQL_HOST'),
-            user=os.getenv('MYSQL_USER'),
-            password=os.getenv('MYSQL_PASSWORD'),
-            database=os.getenv('MYSQL_DB')
-        )
-        return connection
-    except Exception as e:
-        print(f"Database connection error: {e}")
-        return None
 
 def get_portfolio_summary(symbol: str = None) -> Dict:
     """Get enhanced portfolio summary with P&L data"""

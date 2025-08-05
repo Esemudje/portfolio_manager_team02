@@ -1,169 +1,13 @@
 import mysql.connector
 import datetime
-import os
 from typing import Dict, Optional
 from dotenv import load_dotenv
 from .buyRequest import buyRequest
 from .portfolio import get_cash_balance, update_cash_balance
-from .market import get_quote
+from .utils import get_db_connection, get_current_price
 
 # Load environment variables from .env file
 load_dotenv()
-
-def get_db_connection():
-    """Get database connection using environment variables"""
-    try:
-        connection = mysql.connector.connect(
-            host=os.getenv('MYSQL_HOST'),
-            user=os.getenv('MYSQL_USER'),
-            password=os.getenv('MYSQL_PASSWORD'),
-            database=os.getenv('MYSQL_DB')
-        )
-        return connection
-    except Exception as e:
-        print(f"Database connection error: {e}")
-        return None
-
-def get_current_price(symbol: str) -> Dict:
-    """Get current stock price with API-first, database-fallback strategy"""
-    db = None
-    api_error = None
-    db_error = None
-    
-    try:
-        # First, try to get fresh price from API
-        print(f"Fetching fresh price from API for {symbol}...")
-        api_data = get_quote(symbol.upper())
-        
-        if api_data and '05. price' in api_data:
-            current_price = float(api_data['05. price'])
-            
-            # Cache the fresh price in database for future fallback use
-            cache_success = cache_price_in_database(symbol.upper(), api_data)
-            if cache_success:
-                print(f"Fresh price cached in database for {symbol}")
-            
-            print(f"Fresh price from API for {symbol}: ${current_price}")
-            return {
-                "symbol": symbol.upper(),
-                "current_price": current_price,
-                "source": "api",
-                "last_updated": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
-        else:
-            api_error = "Invalid API response or missing price data"
-            
-    except Exception as e:
-        api_error = str(e)
-        print(f"API failed for {symbol}: {api_error}")
-    
-    # API failed, try database fallback
-    try:
-        print(f"API failed, trying database fallback for {symbol}...")
-        db = get_db_connection()
-        if db:
-            cursor = db.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT stock_symbol, current_price, updated_at 
-                FROM api_stock_information 
-                WHERE stock_symbol = %s
-            """, (symbol.upper(),))
-            
-            result = cursor.fetchone()
-            if result and result['current_price']:
-                print(f"Fallback price found in database for {symbol}: ${result['current_price']}")
-                return {
-                    "symbol": result['stock_symbol'],
-                    "current_price": float(result['current_price']),
-                    "source": "database_fallback",
-                    "last_updated": result['updated_at'].strftime('%Y-%m-%d %H:%M:%S') if result['updated_at'] else None
-                }
-            else:
-                db_error = "No cached data found in database"
-        else:
-            db_error = "Database connection failed"
-            
-    except Exception as e:
-        db_error = str(e)
-        print(f"Database fallback failed for {symbol}: {db_error}")
-    finally:
-        if db:
-            db.close()
-    
-    # Both API and database failed
-    if "rate limit" in api_error.lower() if api_error else False:
-        return {"error": f"Rate limit exceeded and no cached data found in database"}
-    else:
-        return {"error": f"Both API and database failed. API error: {api_error}. Database error: {db_error}"}
-
-def cache_price_in_database(symbol: str, api_data: Dict) -> bool:
-    """Cache API price data in database for future use"""
-    db = None
-    try:
-        db = get_db_connection()
-        if not db:
-            return False
-            
-        cursor = db.cursor()
-        
-        # Extract relevant data from API response
-        current_price = float(api_data.get('05. price', 0))
-        open_price = float(api_data.get('02. open', current_price))
-        high_price = float(api_data.get('03. high', current_price))
-        low_price = float(api_data.get('04. low', current_price))
-        previous_close = float(api_data.get('08. previous close', current_price))
-        change_amount = float(api_data.get('09. change', 0))
-        change_percent = api_data.get('10. change percent', '0%').rstrip('%')
-        volume = int(api_data.get('06. volume', 0))
-        latest_trading_day = api_data.get('07. latest trading day', datetime.date.today().strftime('%Y-%m-%d'))
-        
-        # Insert or update the stock information
-        cursor.execute("""
-            INSERT INTO api_stock_information 
-            (stock_symbol, open_price, high_price, low_price, current_price, volume, 
-             latest_trading_day, previous_close, change_amount, change_percent)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE
-            open_price = VALUES(open_price),
-            high_price = VALUES(high_price),
-            low_price = VALUES(low_price),
-            current_price = VALUES(current_price),
-            volume = VALUES(volume),
-            latest_trading_day = VALUES(latest_trading_day),
-            previous_close = VALUES(previous_close),
-            change_amount = VALUES(change_amount),
-            change_percent = VALUES(change_percent),
-            updated_at = CURRENT_TIMESTAMP
-        """, (symbol, open_price, high_price, low_price, current_price, volume,
-              latest_trading_day, previous_close, change_amount, change_percent))
-        
-        db.commit()
-        print(f"Cached fresh price data for {symbol} in database")
-        return True
-        
-    except Exception as e:
-        print(f"Error caching price for {symbol}: {e}")
-        return False
-    finally:
-        if db:
-            db.close()
-
-def test_database_connection() -> bool:
-    """Test database connection and basic operations"""
-    try:
-        db = get_db_connection()
-        if not db:
-            return False
-        
-        cursor = db.cursor()
-        cursor.execute("SELECT 1")
-        result = cursor.fetchone()
-        db.close()
-        
-        return result is not None
-    except Exception as e:
-        print(f"Database health check failed: {e}")
-        return False
 
 def buy_stock(buy_request: buyRequest, cash: float = None, user_id: str = 'default_user') -> str:
     """Buy stock with enhanced error handling and cash management"""
@@ -199,79 +43,75 @@ def buy_stock(buy_request: buyRequest, cash: float = None, user_id: str = 'defau
                 return f"Error getting cash balance: {cash_result['error']}"
             cash = cash_result['cash_balance']
 
-        if cash < total_cost:
-            return f'Insufficient funds. Required: ${total_cost:.2f}, Available: ${cash:.2f}'
+        # Check if user has enough cash
+        if total_cost > cash:
+            return f"Insufficient funds. Required: ${total_cost:.2f}, Available: ${cash:.2f}"
 
+        # Start transaction
         date_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # Insert into trades
-        cursor.execute(
-            "INSERT INTO trades (stock_symbol, trade_type, price_at_trade, quantity, trade_date) VALUES (%s, %s, %s, %s, %s)",
-            (buy_request.symbol.upper(), "BUY", price, buy_request.quantity, date_time)
-        )
         
-        trade_id = cursor.lastrowid
-        print(f"Trade successful. Trade ID: {trade_id}")
-
-        # Check existing holdings
-        cursor.execute(
-            "SELECT quantity, average_cost FROM holdings WHERE stock_symbol = %s",
-            (buy_request.symbol.upper(),)
-        )
-        results = cursor.fetchall()
-
-        if results:
-            # Update existing holding with new average cost
-            existing_quantity = float(results[0]['quantity'])
-            existing_avg_cost = float(results[0]['average_cost'])
-
-            new_quantity = existing_quantity + buy_request.quantity
-            new_avg_cost = (
-                (existing_quantity * existing_avg_cost) + (buy_request.quantity * price)
-            ) / new_quantity
-
-            cursor.execute(
-                "UPDATE holdings SET quantity = %s, average_cost = %s WHERE stock_symbol = %s",
-                (new_quantity, round(new_avg_cost, 4), buy_request.symbol.upper())
-            )
-            print(f"Holding updated: {new_quantity} shares @ ${new_avg_cost:.4f} avg cost")
+        # Record the trade
+        cursor.execute("""
+            INSERT INTO trades (stock_symbol, trade_type, price_at_trade, quantity, trade_date) 
+            VALUES (%s, %s, %s, %s, %s)
+        """, (buy_request.symbol.upper(), "BUY", price, buy_request.quantity, date_time))
+        
+        # Update holdings - check if we already own this stock
+        cursor.execute("""
+            SELECT stock_symbol, quantity, average_cost FROM holdings WHERE stock_symbol = %s
+        """, (buy_request.symbol.upper(),))
+        
+        existing_holding = cursor.fetchone()
+        
+        if existing_holding:
+            # Update existing holding with weighted average cost
+            old_quantity = existing_holding['quantity']
+            old_avg_cost = existing_holding['average_cost']
+            old_total_cost = old_quantity * old_avg_cost
+            
+            new_quantity = old_quantity + buy_request.quantity
+            new_total_cost = old_total_cost + total_cost
+            new_avg_cost = new_total_cost / new_quantity
+            
+            cursor.execute("""
+                UPDATE holdings SET quantity = %s, average_cost = %s WHERE stock_symbol = %s
+            """, (new_quantity, new_avg_cost, buy_request.symbol.upper()))
+            
+            print(f"Updated holding: {new_quantity} shares at ${new_avg_cost:.4f} avg cost")
         else:
-            # Insert new holding
-            cursor.execute(
-                "INSERT INTO holdings (stock_symbol, quantity, average_cost) VALUES (%s, %s, %s)",
-                (buy_request.symbol.upper(), buy_request.quantity, price)
-            )
-            print(f"New holding added: {buy_request.quantity} shares @ ${price:.2f}")
+            # Create new holding
+            cursor.execute("""
+                INSERT INTO holdings (stock_symbol, quantity, average_cost) VALUES (%s, %s, %s)
+            """, (buy_request.symbol.upper(), buy_request.quantity, price))
+            
+            print(f"Created new holding: {buy_request.quantity} shares at ${price:.2f}")
 
-        # Update cash balance if using database cash management
-        if cash is not None:
-            new_cash_balance = cash - total_cost
-            update_cash_balance(user_id, new_cash_balance)
-            print(f"Cash balance updated: ${new_cash_balance:.2f}")
+        # Update cash balance
+        new_cash_balance = cash - total_cost
+        if not update_cash_balance(user_id, new_cash_balance):
+            db.rollback()
+            return "Failed to update cash balance"
 
         db.commit()
-        
-        return f"Transaction successful. Bought {buy_request.quantity} shares of {buy_request.symbol.upper()} at ${price:.2f} per share. Total cost: ${total_cost:.2f}"
+        print(f"Trade successful! Cash balance: ${new_cash_balance:.2f}")
+        return f"Buy order successful: {buy_request.quantity} shares of {buy_request.symbol} at ${price:.2f}"
 
     except mysql.connector.Error as err:
         if db:
             db.rollback()
         print(f"Database error: {err}")
-        return f"Database error: {str(err)}"
-    except ValueError as e:
-        print(f"Value error: {e}")
-        return f"Invalid data: {str(e)}"
+        return "Database error"
     except Exception as e:
         if db:
             db.rollback()
-        print(f"Unexpected error: {e}")
+        print(f"Error: {e}")
         return f"Error: {str(e)}"
     finally:
         if db:
             db.close()
 
 def get_stock_quote(symbol: str) -> Dict:
-    """Get current stock quote from database"""
+    """Get stock quote from database cache (database-only, no API fallback)"""
     db = None
     try:
         db = get_db_connection()
@@ -280,28 +120,29 @@ def get_stock_quote(symbol: str) -> Dict:
         
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
-            SELECT stock_symbol, current_price, open_price, high_price, low_price, 
-                   volume, previous_close, change_amount, change_percent, 
+            SELECT stock_symbol, current_price, open_price, high_price, low_price,
+                   volume, previous_close, change_amount, change_percent,
                    latest_trading_day, updated_at 
             FROM api_stock_information 
             WHERE stock_symbol = %s
         """, (symbol.upper(),))
         
         result = cursor.fetchone()
-        if result:
-            # Return data in both API format and database format for compatibility
+        
+        if result and result['current_price']:
             change_percent_formatted = f"{result['change_percent']}%" if result['change_percent'] is not None else "0%"
             
             return {
-                # Database format (new)
+                # Database format 
                 "symbol": result['stock_symbol'],
                 "current_price": float(result['current_price']) if result['current_price'] else 0,
                 "change_amount": float(result['change_amount']) if result['change_amount'] else 0,
                 "change_percent": change_percent_formatted,
                 "volume": int(result['volume']) if result['volume'] else 0,
+                "source": "database",
                 "last_updated": result['updated_at'].strftime('%Y-%m-%d %H:%M:%S') if result['updated_at'] else None,
                 
-                # API format compatibility (for existing frontend code)
+                # API format compatibility
                 "01. symbol": result['stock_symbol'],
                 "02. open": str(result['open_price']) if result['open_price'] else "0",
                 "03. high": str(result['high_price']) if result['high_price'] else "0", 
@@ -311,14 +152,13 @@ def get_stock_quote(symbol: str) -> Dict:
                 "07. latest trading day": result['latest_trading_day'] if result['latest_trading_day'] else None,
                 "08. previous close": str(result['previous_close']) if result['previous_close'] else "0",
                 "09. change": str(result['change_amount']) if result['change_amount'] else "0",
-                "10. change percent": change_percent_formatted,
-                "source": "database"
+                "10. change percent": change_percent_formatted
             }
         else:
-            return {"error": f"Symbol {symbol} not found"}
+            return {"error": "No cached data found for this symbol"}
             
     except Exception as e:
-        print(f"Error getting stock quote: {e}")
+        print(f"Error getting stock quote from database: {e}")
         return {"error": str(e)}
     finally:
         if db:
@@ -326,16 +166,17 @@ def get_stock_quote(symbol: str) -> Dict:
 
 def validate_buy_request(buy_request: buyRequest) -> Optional[str]:
     """Validate buy request parameters"""
-    if not buy_request.symbol:
-        return "Symbol is required"
+    if not buy_request:
+        return "Buy request is required"
     
-    if len(buy_request.symbol.strip()) == 0:
-        return "Symbol cannot be empty"
+    if not buy_request.symbol or len(buy_request.symbol.strip()) == 0:
+        return "Stock symbol is required"
     
     if buy_request.quantity <= 0:
-        return "Quantity must be positive"
+        return "Quantity must be greater than 0"
     
-    if not isinstance(buy_request.quantity, (int, float)):
-        return "Quantity must be a number"
+    # Symbol length check
+    if len(buy_request.symbol) > 10:
+        return "Stock symbol too long"
     
-    return None  # No errors
+    return None  # Valid request
