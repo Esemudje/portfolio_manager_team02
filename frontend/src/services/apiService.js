@@ -152,6 +152,29 @@ const apiService = {
   // Get FIFO holdings information for a symbol
   getHoldingsInfo: async (symbol) => {
     return api.get(`/trade/holdings/${symbol.toUpperCase()}`);
+  },
+
+  // P&L Functions
+  
+  // Get unrealized P&L for all holdings or specific symbol
+  getUnrealizedPnL: async (symbol = null, userId = 'default_user') => {
+    const params = { user_id: userId };
+    if (symbol) params.symbol = symbol.toUpperCase();
+    return api.get('/pnl/unrealized', { params });
+  },
+
+  // Get realized P&L summary
+  getRealizedPnL: async (symbol = null, days = 30) => {
+    const params = { days };
+    if (symbol) params.symbol = symbol.toUpperCase();
+    return api.get('/pnl/realized', { params });
+  },
+
+  // Get comprehensive P&L report (realized + unrealized)
+  getComprehensivePnL: async (symbol = null, days = 30) => {
+    const params = { days };
+    if (symbol) params.symbol = symbol.toUpperCase();
+    return api.get('/pnl/comprehensive', { params });
   }
 };
 
