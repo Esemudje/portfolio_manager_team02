@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import apiService from '../services/apiService';
 
+
 const Dashboard = () => {
   const [portfolioData, setPortfolioData] = useState({
     totalValue: 0,
@@ -20,25 +21,35 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
 
   const fetchMarketNews = useCallback(async () => {
-    try {
-      setNewsLoading(true);
-      
-      // Fetch news related to watchlist stocks (TODO: Jay code here)
-      const news = await apiService.getMarketNews();
+  try {
+    setNewsLoading(true);
+
+    // Fetch all news articles from the backend
+    const news = await apiService.getMarketNews();
     console.log('News data from backend:', news);
+
+    // Randomly shuffle the array and take the first 3
+    const shuffled = news.sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 3);
+
     setMarketNews(
-        news.map((item) => ({
-          title: item.headline,
-          source: item.reported_by,
-          time_published: new Date().toISOString() // Dummy timestamp
-        }))
-      )
-    } catch (err) {
-      console.error('Failed to fetch market news:', err);
-    } finally {
-      setNewsLoading(false);
-    }
-  }, []);
+      selected.map((item) => ({
+        title: item.headline,
+        source: item.reported_by,
+        time_published: new Date().toISOString(), // Dummy timestamp
+        summary: item.summary || '',
+        overall_sentiment_label: item.sentiment || null,
+        url: item.url || '#',
+        relatedStock: item.related_stock || null
+      }))
+    );
+  } catch (err) {
+    console.error('Failed to fetch market news:', err);
+  } finally {
+    setNewsLoading(false);
+  }
+}, []);
+
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -202,6 +213,8 @@ const Dashboard = () => {
         <div className="stat-card">
           <div className="stat-value">{formatCurrency(portfolioData.totalCash)}</div>
           <div className="stat-label">Available Cash</div>
+          <br></br>
+          <Link to='/cash' className="btn btn-primary">Manage cash</Link>
         </div>
         
         <div className="stat-card">

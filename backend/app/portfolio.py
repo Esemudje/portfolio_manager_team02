@@ -182,6 +182,56 @@ def get_cash_balance(user_id: str = 'default_user') -> Dict:
         if db:
             db.close()
 
+def add_cash_balance(user_id: str, amount: float) -> bool:
+    """Add cash balance for user"""
+    db = None
+    try:
+        db = get_db_connection()
+        if not db:
+            return False
+        
+        cursor = db.cursor()
+        cursor.execute("""
+            INSERT INTO user_balance (user_id, cash_balance) 
+            VALUES (%s, %s) 
+            ON DUPLICATE KEY UPDATE cash_balance = cash_balance + %s
+        """, (user_id, amount, amount))
+        
+        db.commit()
+        return cursor.rowcount > 0
+        
+    except Exception as e:
+        print(f"Error adding cash balance: {e}")
+        return False
+    finally:
+        if db:
+            db.close()
+
+def subtract_cash_balance(user_id: str, amount: float) -> bool:
+    """Subtract cash balance for user"""
+    db = None
+    try:
+        db = get_db_connection()
+        if not db:
+            return False
+        
+        cursor = db.cursor()
+        cursor.execute("""
+            UPDATE user_balance 
+            SET cash_balance = cash_balance - %s 
+            WHERE user_id = %s AND cash_balance >= %s
+        """, (amount, user_id, amount))
+        
+        db.commit()
+        return cursor.rowcount > 0
+        
+    except Exception as e:
+        print(f"Error subtracting cash balance: {e}")
+        return False
+    finally:
+        if db:
+            db.close()
+
 def update_cash_balance(user_id: str, new_balance: float) -> bool:
     """Update cash balance for user"""
     db = None

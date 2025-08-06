@@ -12,7 +12,10 @@ from .portfolio import (
     get_portfolio_summary,
     get_trade_history,
     get_cash_balance,
-    get_portfolio_performance
+    get_portfolio_performance,
+    add_cash_balance,
+    subtract_cash_balance
+    
 )
 from .buy import buy_stock, get_stock_quote, validate_buy_request
 from .sell import sell_stock, get_fifo_holdings
@@ -156,6 +159,49 @@ def cash_balance():
     except Exception as e:
         print(f"Error getting cash balance: {str(e)}")
         return {"error": str(e)}, 500
+    
+@bp.post("portfolio/cash/deposit")
+def cash_deposit():
+    """Deposit cash into portfolio"""
+    try:
+        data = request.get_json()
+        amount = data.get('amount')
+        user_id = data.get('user_id', 'default_user')
+
+        if amount is None or amount <= 0:
+            return {"error": "Invalid deposit amount"}, 400
+
+        print(f"API request received for cash deposit: ${amount} for user {user_id}")
+
+        data = add_cash_balance(user_id, amount)  # Fixed parentheses too
+        return jsonify(data)
+    except Exception as e:
+        print("Error in deposit route:", str(e))
+        return {"error": "Internal server error"}, 500
+
+    except Exception as e:
+        print(f"Error depositing cash: {str(e)}")
+        return {"error": str(e)}, 500
+    
+@bp.post("portfolio/cash/withdraw")
+def cash_withdrawal():
+    """Withdraw cash from portfolio"""
+    try:
+        data = request.get_json()
+        amount = data.get('amount')
+        user_id = data.get('user_id')
+        
+        if amount is None or amount <= 0:
+            return {"error": "Invalid withdrawal amount"}, 400
+        
+        print(f"API request received for cash withdrawal: ${amount} for user {user_id}")
+        data = subtract_cash_balance(user_id, amount)
+        return jsonify(data)
+    
+    except Exception as e:
+        print(f"Error withdrawing cash: {str(e)}")
+        return {"error": str(e)}, 500
+
 
 @bp.get("/portfolio/performance")
 def portfolio_performance():
@@ -168,6 +214,8 @@ def portfolio_performance():
     except Exception as e:
         print(f"Error getting portfolio performance: {str(e)}")
         return {"error": str(e)}, 500
+    
+
 
 # Trading Endpoints
 @bp.post("/trade/buy")

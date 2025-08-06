@@ -6,6 +6,7 @@ import Trading from './components/Trading.jsx';
 import StockDetail from './components/StockDetail.jsx';
 import DatabaseTest from './components/DatabaseTest.jsx';
 import './App.css';
+import ManageCash from './components/ManageCash.jsx';
 
 function Navigation() {
   const location = useLocation();
@@ -48,6 +49,15 @@ function Navigation() {
                 DB Test
               </Link>
             </li>
+
+            <li>
+              <Link 
+                to="/cash" 
+                className={`nav-link ${location.pathname === '/cash' ? 'active' : ''}`}
+              >
+                Cash Management
+              </Link>
+            </li>            
           </ul>
         </nav>
       </div>
@@ -68,6 +78,7 @@ function App() {
             <Route path="/trading" element={<Trading />} />
             <Route path="/stock/:symbol" element={<StockDetail />} />
             <Route path="/test" element={<DatabaseTest />} />
+            <Route path="/cash" element={<ManageCash/>} />
           </Routes>
         </main>
       </div>

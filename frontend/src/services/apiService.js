@@ -180,7 +180,22 @@ const apiService = {
   //get market news
   getMarketNews: async () => {
   return api.get('/news');
+  },
+
+  depositCash: async (amount, userId = 'default_user') => {
+    return api.post('/portfolio/cash/deposit', {
+      amount: parseFloat(amount),
+      user_id: userId
+    });
+  },
+
+  withdrawCash: async (amount, userId = 'default_user') => {
+    return api.post('/portfolio/cash/withdraw', {
+      amount: parseFloat(amount),
+      user_id: userId
+    });
   }
 };
+
 
 export default apiService;
