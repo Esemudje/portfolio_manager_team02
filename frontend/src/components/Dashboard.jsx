@@ -78,7 +78,11 @@ const Dashboard = () => {
         
         // Extract totals from summary
         if (pnlData.summary) {
-          totalRealizedPL = parseFloat(pnlData.summary.realized_pnl || 0);
+          totalRealizedPL = parseFloat(
+            pnlData.summary.total_realized_pnl || 
+            pnlData.summary.realized_pnl || 
+            0
+          );
           totalUnrealizedPL = parseFloat(pnlData.summary.unrealized_pnl || 0);
         }
         
@@ -202,7 +206,11 @@ const Dashboard = () => {
           const pnlData = comprehensivePnLResponse.value;
           
           if (pnlData.summary) {
-            totalRealizedPL = parseFloat(pnlData.summary.total_realized_pnl || 0);
+            totalRealizedPL = parseFloat(
+              pnlData.summary.total_realized_pnl || 
+              pnlData.summary.realized_pnl || 
+              0
+            );
             totalUnrealizedPL = parseFloat(pnlData.summary.total_unrealized_pnl || 0);
             totalPL = totalRealizedPL + totalUnrealizedPL;
           }
