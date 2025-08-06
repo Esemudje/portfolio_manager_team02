@@ -83,7 +83,11 @@ const Dashboard = () => {
             pnlData.summary.realized_pnl || 
             0
           );
-          totalUnrealizedPL = parseFloat(pnlData.summary.unrealized_pnl || 0);
+          totalUnrealizedPL = parseFloat(
+            pnlData.summary.total_unrealized_pnl || 
+            pnlData.summary.unrealized_pnl || 
+            0
+          );
         }
         
         // Extract per-symbol data from unrealized holdings
@@ -204,15 +208,22 @@ const Dashboard = () => {
         let comprehensivePnLBySymbol = {};
         if (comprehensivePnLResponse.status === 'fulfilled' && comprehensivePnLResponse.value) {
           const pnlData = comprehensivePnLResponse.value;
+          console.log('Polling - P&L data structure:', pnlData);
           
           if (pnlData.summary) {
+            console.log('Polling - P&L summary:', pnlData.summary);
             totalRealizedPL = parseFloat(
               pnlData.summary.total_realized_pnl || 
               pnlData.summary.realized_pnl || 
               0
             );
-            totalUnrealizedPL = parseFloat(pnlData.summary.total_unrealized_pnl || 0);
+            totalUnrealizedPL = parseFloat(
+              pnlData.summary.total_unrealized_pnl || 
+              pnlData.summary.unrealized_pnl || 
+              0
+            );
             totalPL = totalRealizedPL + totalUnrealizedPL;
+            console.log('Polling - Calculated P&L:', { totalRealizedPL, totalUnrealizedPL, totalPL });
           }
 
           if (pnlData.by_symbol) {
@@ -239,6 +250,13 @@ const Dashboard = () => {
             
             // Calculate total value from holdings if summary not available
             totalValue = holdings.reduce((sum, holding) => sum + holding.marketValue, 0);
+            
+            // Calculate P&L totals from holdings if not available from summary
+            if (totalRealizedPL === 0 && totalUnrealizedPL === 0) {
+              totalUnrealizedPL = holdings.reduce((sum, holding) => sum + holding.unrealizedPnl, 0);
+              totalRealizedPL = holdings.reduce((sum, holding) => sum + (holding.realizedPnl || 0), 0);
+              totalPL = totalRealizedPL + totalUnrealizedPL;
+            }
           }
           
           // Use summary if available, otherwise use calculated value
