@@ -8,6 +8,7 @@ const Trading = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStock, setSelectedStock] = useState(null);
   const [stockQuote, setStockQuote] = useState(null);
+  const [currentHolding, setCurrentHolding] = useState(null);
   const [tradeAction, setTradeAction] = useState(searchParams.get('action') || 'buy');
   const [quantity, setQuantity] = useState(1);
   const [availableCash, setAvailableCash] = useState(10000);
@@ -55,25 +56,49 @@ const Trading = () => {
       setLoading(true);
       setError(null);
       setSelectedStock(symbol);
+      setCurrentHolding(null); // Reset holding info
       
-      // Use database-first approach - backend handles database check + API fallback
-      const quote = await apiService.getStockQuote(symbol);
-      setStockQuote(quote);
+      // Fetch both stock quote and current holdings
+      const [quoteResult, holdingsResult] = await Promise.allSettled([
+        apiService.getStockQuote(symbol),
+        apiService.getPortfolio(symbol) // Get portfolio data for this specific symbol
+      ]);
+      
+      // Handle quote data
+      if (quoteResult.status === 'fulfilled') {
+        setStockQuote(quoteResult.value);
+      } else {
+        // If API fails, try to get cached data from database
+        try {
+          const cachedQuote = await apiService.getStockQuoteFromDb(symbol);
+          if (cachedQuote && !cachedQuote.error) {
+            setStockQuote(cachedQuote);
+            console.warn(`Using cached data for ${symbol} - API unavailable`);
+          } else {
+            setError(`No data available for ${symbol} - please try again later`);
+          }
+        } catch (dbErr) {
+          setError(`Failed to fetch data for ${symbol}`);
+          console.error('Stock selection error:', quoteResult.reason);
+        }
+      }
+      
+      // Handle holdings data
+      if (holdingsResult.status === 'fulfilled' && holdingsResult.value.holdings && holdingsResult.value.holdings.length > 0) {
+        const holding = holdingsResult.value.holdings[0]; // Should only be one holding for the specific symbol
+        setCurrentHolding({
+          quantity: parseFloat(holding.quantity || 0),
+          averageCost: parseFloat(holding.average_cost || 0),
+          marketValue: parseFloat(holding.market_value || 0),
+          unrealizedPnl: parseFloat(holding.unrealized_pnl || 0)
+        });
+      } else {
+        setCurrentHolding({ quantity: 0 }); // User doesn't own this stock
+      }
       
     } catch (err) {
-      // If API fails, try to get cached data from database
-      try {
-        const cachedQuote = await apiService.getStockQuoteFromDb(symbol);
-        if (cachedQuote && !cachedQuote.error) {
-          setStockQuote(cachedQuote);
-          console.warn(`Using cached data for ${symbol} - API unavailable`);
-        } else {
-          setError(`No data available for ${symbol} - please try again later`);
-        }
-      } catch (dbErr) {
-        setError(`Failed to fetch data for ${symbol}`);
-        console.error('Stock selection error:', err);
-      }
+      setError(`Failed to fetch data for ${symbol}`);
+      console.error('Stock selection error:', err);
     } finally {
       setLoading(false);
     }
@@ -259,6 +284,35 @@ const Trading = () => {
                 </div>
               </div>
               
+              {/* Current Holdings Info */}
+              {currentHolding !== null && (
+                <div style={{ 
+                  marginTop: '1rem', 
+                  padding: '0.75rem', 
+                  backgroundColor: currentHolding.quantity > 0 ? '#f0f9ff' : '#fef2f2', 
+                  border: `1px solid ${currentHolding.quantity > 0 ? '#0ea5e9' : '#f87171'}`,
+                  borderRadius: '0.375rem'
+                }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
+                    Your Holdings
+                  </div>
+                  {currentHolding.quantity > 0 ? (
+                    <div style={{ fontSize: '0.8rem' }}>
+                      <div><strong>{currentHolding.quantity} shares</strong> owned</div>
+                      <div>Avg Cost: {formatCurrency(currentHolding.averageCost)}</div>
+                      <div>Market Value: {formatCurrency(currentHolding.marketValue)}</div>
+                      <div className={currentHolding.unrealizedPnl >= 0 ? 'positive' : 'negative'}>
+                        P&L: {formatCurrency(currentHolding.unrealizedPnl)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                      You don't currently own any shares of {selectedStock}
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <Link to={`/stock/${selectedStock}`} className="btn btn-secondary" style={{ marginTop: '1rem', fontSize: '0.9rem' }}>
                 View Details
               </Link>
@@ -326,6 +380,17 @@ const Trading = () => {
                     +
                   </button>
                 </div>
+                
+                {/* Show available shares for sell orders */}
+                {tradeAction === 'sell' && currentHolding && (
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#6b7280' }}>
+                    {currentHolding.quantity > 0 ? (
+                      <span>Available to sell: <strong>{currentHolding.quantity} shares</strong></span>
+                    ) : (
+                      <span style={{ color: '#ef4444' }}>⚠️ You don't own any shares of {selectedStock}</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Order Type */}
