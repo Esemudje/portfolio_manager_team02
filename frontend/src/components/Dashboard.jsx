@@ -409,6 +409,8 @@ const Dashboard = () => {
                     <th>Quantity</th>
                     <th>Avg Cost</th>
                     <th>Current Price</th>
+                    <th>Change</th>
+                    <th>Change %</th>
                     <th>Market Value</th>
                     <th>P&L</th>
                   </tr>
@@ -418,6 +420,10 @@ const Dashboard = () => {
                     // Use pre-calculated values from database
                     const marketValue = holding.marketValue;
                     const pl = holding.unrealizedPnl;
+                    
+                    // Calculate change amount and percentage
+                    const changeAmount = holding.currentPrice - holding.averageCost;
+                    const changePercent = holding.averageCost > 0 ? ((changeAmount / holding.averageCost) * 100) : 0;
                     
                     return (
                       <tr key={index}>
@@ -429,6 +435,12 @@ const Dashboard = () => {
                         <td>{holding.quantity}</td>
                         <td>{formatCurrency(holding.averageCost)}</td>
                         <td>{formatCurrency(holding.currentPrice)}</td>
+                        <td className={changeAmount >= 0 ? 'positive' : 'negative'}>
+                          {changeAmount >= 0 ? '+' : ''}{formatCurrency(changeAmount)}
+                        </td>
+                        <td className={changePercent >= 0 ? 'positive' : 'negative'}>
+                          {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%
+                        </td>
                         <td>{formatCurrency(marketValue)}</td>
                         <td className={pl >= 0 ? 'positive' : 'negative'}>
                           {formatCurrency(pl)}
