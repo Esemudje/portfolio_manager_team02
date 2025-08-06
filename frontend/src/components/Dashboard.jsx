@@ -14,7 +14,12 @@ const Dashboard = () => {
     holdings: []
   });
   const [isPolling, setIsPolling] = useState(false);
-  const [watchlist] = useState(['AAPL', 'GOOGL', 'AMZN', 'TSLA', 'MSFT']);
+  const [watchlist, setWatchlist] = useState(() => {
+    // Load watchlist from localStorage or use default stocks
+    const savedWatchlist = localStorage.getItem('portfolioWatchlist');
+    return savedWatchlist ? JSON.parse(savedWatchlist) : ['AAPL', 'GOOGL', 'AMZN', 'TSLA', 'MSFT'];
+  });
+  const [newStockSymbol, setNewStockSymbol] = useState('');
   const [stockQuotes, setStockQuotes] = useState({});
   const [marketNews, setMarketNews] = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -50,6 +55,61 @@ const Dashboard = () => {
     setNewsLoading(false);
   }
 }, []);
+
+  // Watchlist management functions
+  const addToWatchlist = async (symbol) => {
+    const upperSymbol = symbol.toUpperCase().trim();
+    
+    if (!upperSymbol) {
+      setError('Please enter a valid stock symbol');
+      return;
+    }
+    
+    if (watchlist.includes(upperSymbol)) {
+      setError(`${upperSymbol} is already in your watchlist`);
+      return;
+    }
+    
+    try {
+      // Validate the stock symbol by trying to fetch its quote
+      const quote = await apiService.getStockQuote(upperSymbol);
+      if (quote && !quote.error) {
+        const updatedWatchlist = [...watchlist, upperSymbol];
+        setWatchlist(updatedWatchlist);
+        localStorage.setItem('portfolioWatchlist', JSON.stringify(updatedWatchlist));
+        setNewStockSymbol('');
+        setError(null);
+        
+        // Fetch quote for the new stock
+        setStockQuotes(prev => ({
+          ...prev,
+          [upperSymbol]: quote
+        }));
+      } else {
+        setError(`Invalid stock symbol: ${upperSymbol}`);
+      }
+    } catch (err) {
+      setError(`Failed to add ${upperSymbol}: Invalid stock symbol`);
+    }
+  };
+
+  const removeFromWatchlist = (symbol) => {
+    const updatedWatchlist = watchlist.filter(s => s !== symbol);
+    setWatchlist(updatedWatchlist);
+    localStorage.setItem('portfolioWatchlist', JSON.stringify(updatedWatchlist));
+    
+    // Remove from stock quotes
+    setStockQuotes(prev => {
+      const newQuotes = { ...prev };
+      delete newQuotes[symbol];
+      return newQuotes;
+    });
+  };
+
+  const handleAddStockSubmit = (e) => {
+    e.preventDefault();
+    addToWatchlist(newStockSymbol);
+  };
 
 
   const fetchDashboardData = useCallback(async () => {
@@ -463,34 +523,83 @@ const Dashboard = () => {
             <Link to="/trading" className="btn btn-primary">Trade</Link>
           </div>
           
+          {/* Add Stock Form */}
+          <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
+            <form onSubmit={handleAddStockSubmit} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="Enter stock symbol (e.g., AAPL)"
+                value={newStockSymbol}
+                onChange={(e) => setNewStockSymbol(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '0.5rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.875rem'
+                }}
+              />
+              <button
+                type="submit"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+              >
+                Add
+              </button>
+            </form>
+          </div>
+          
           <div className="stock-list">
-            {watchlist.map(symbol => {
-              const quote = stockQuotes[symbol];
-              if (!quote) return null;
-              
-              // Handle both API format and database format
-              const price = parseFloat(quote['05. price'] || quote.current_price || 0);
-              const change = parseFloat(quote['09. change'] || quote.change_amount || 0);
-              const changePercent = parseFloat(quote['10. change percent']?.replace('%', '') || quote.change_percent?.replace('%', '') || 0);
-              
-              return (
-                <div key={symbol} className="stock-item">
-                  <div className="stock-info">
-                    <Link to={`/stock/${symbol}`} style={{ textDecoration: 'none' }}>
-                      <div className="stock-symbol">{symbol}</div>
-                    </Link>
-                  </div>
-                  <div className="stock-price">
-                    <div className="stock-current-price">
-                      {formatCurrency(price)}
+            {watchlist.length > 0 ? (
+              watchlist.map(symbol => {
+                const quote = stockQuotes[symbol];
+                if (!quote) return null;
+                
+                // Handle both API format and database format
+                const price = parseFloat(quote['05. price'] || quote.current_price || 0);
+                const change = parseFloat(quote['09. change'] || quote.change_amount || 0);
+                const changePercent = parseFloat(quote['10. change percent']?.replace('%', '') || quote.change_percent?.replace('%', '') || 0);
+                
+                return (
+                  <div key={symbol} className="stock-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', flex: 1 }}>
+                      <div className="stock-info">
+                        <Link to={`/stock/${symbol}`} style={{ textDecoration: 'none' }}>
+                          <div className="stock-symbol">{symbol}</div>
+                        </Link>
+                      </div>
+                      <div className="stock-price">
+                        <div className="stock-current-price">
+                          {formatCurrency(price)}
+                        </div>
+                        <div className={`stock-change ${change >= 0 ? 'positive' : 'negative'}`}>
+                          {change >= 0 ? '+' : ''}{formatCurrency(change)} ({changePercent.toFixed(2)}%)
+                        </div>
+                      </div>
                     </div>
-                    <div className={`stock-change ${change >= 0 ? 'positive' : 'negative'}`}>
-                      {change >= 0 ? '+' : ''}{formatCurrency(change)} ({changePercent.toFixed(2)}%)
-                    </div>
+                    <button
+                      onClick={() => removeFromWatchlist(symbol)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        fontSize: '1.2rem',
+                        padding: '0.25rem',
+                        marginLeft: '0.5rem'
+                      }}
+                      title={`Remove ${symbol} from watchlist`}
+                    >
+                      ×
+                    </button>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                Your watchlist is empty. Add some stocks to get started!
+              </div>
+            )}
           </div>
         </div>
       </div>
