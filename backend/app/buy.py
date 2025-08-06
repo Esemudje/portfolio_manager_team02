@@ -65,8 +65,8 @@ def buy_stock(buy_request: buyRequest, cash: float = None, user_id: str = 'defau
         
         if existing_holding:
             # Update existing holding with weighted average cost
-            old_quantity = existing_holding['quantity']
-            old_avg_cost = existing_holding['average_cost']
+            old_quantity = float(existing_holding['quantity'])  
+            old_avg_cost = float(existing_holding['average_cost'])  
             old_total_cost = old_quantity * old_avg_cost
             
             new_quantity = old_quantity + buy_request.quantity
