@@ -13,6 +13,7 @@ const Dashboard = () => {
     dayChange: 0,
     holdings: []
   });
+  const [isPolling, setIsPolling] = useState(false);
   const [watchlist] = useState(['AAPL', 'GOOGL', 'AMZN', 'TSLA', 'MSFT']);
   const [stockQuotes, setStockQuotes] = useState({});
   const [marketNews, setMarketNews] = useState([]);
@@ -172,16 +173,119 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
+  // Add polling for real-time updates (numbers only, no UI disruption)
+  useEffect(() => {
+    const POLLING_INTERVAL = 5000; // 5 seconds
+    
+    const intervalId = setInterval(async () => {
+      console.log('Polling dashboard data...');
+      setIsPolling(true);
+      
+      try {
+        // Fetch only the essential data without triggering loading state
+        const [portfolioResponse, cashResponse, comprehensivePnLResponse] = await Promise.allSettled([
+          apiService.getPortfolio(),
+          apiService.getBalance(),
+          apiService.getComprehensivePnL()
+        ]);
+
+        // Update portfolio data
+        let holdings = [];
+        let totalValue = 0;
+        let totalPL = 0;
+        let totalRealizedPL = 0;
+        let totalUnrealizedPL = 0;
+        
+        // Get comprehensive P&L data
+        let comprehensivePnLBySymbol = {};
+        if (comprehensivePnLResponse.status === 'fulfilled' && comprehensivePnLResponse.value) {
+          const pnlData = comprehensivePnLResponse.value;
+          
+          if (pnlData.summary) {
+            totalRealizedPL = parseFloat(pnlData.summary.total_realized_pnl || 0);
+            totalUnrealizedPL = parseFloat(pnlData.summary.total_unrealized_pnl || 0);
+            totalPL = totalRealizedPL + totalUnrealizedPL;
+          }
+
+          if (pnlData.by_symbol) {
+            pnlData.by_symbol.forEach(item => {
+              comprehensivePnLBySymbol[item.symbol] = item;
+            });
+          }
+        }
+
+        if (portfolioResponse.status === 'fulfilled' && portfolioResponse.value) {
+          const data = portfolioResponse.value;
+          
+          if (data.holdings && Array.isArray(data.holdings)) {
+            holdings = data.holdings.map(holding => ({
+              symbol: holding.symbol || holding.stock_symbol, // Handle both formats
+              quantity: parseFloat(holding.quantity || 0),
+              averageCost: parseFloat(holding.average_cost || 0),
+              currentPrice: parseFloat(holding.current_price || 0),
+              marketValue: parseFloat(holding.market_value || 0),
+              costBasis: parseFloat(holding.cost_basis || 0),
+              unrealizedPnl: parseFloat(holding.unrealized_pnl || 0),
+              realizedPnl: comprehensivePnLBySymbol[holding.symbol || holding.stock_symbol]?.realized_pnl || 0
+            }));
+            
+            // Calculate total value from holdings if summary not available
+            totalValue = holdings.reduce((sum, holding) => sum + holding.marketValue, 0);
+          }
+          
+          // Use summary if available, otherwise use calculated value
+          if (data.summary) {
+            totalValue = parseFloat(data.summary.total_portfolio_value || data.summary.total_value || totalValue);
+            totalPL = parseFloat(data.summary.total_pnl || totalPL);
+          }
+        }
+
+        let cashBalance = 10000;
+        if (cashResponse.status === 'fulfilled' && cashResponse.value?.cash_balance !== undefined) {
+          cashBalance = parseFloat(cashResponse.value.cash_balance);
+        }
+
+        // Update watchlist quotes
+        const quotes = {};
+        for (const symbol of watchlist) {
+          try {
+            const quote = await apiService.getStockQuote(symbol);
+            quotes[symbol] = quote;
+          } catch (err) {
+            console.warn(`Failed to fetch quote for ${symbol}:`, err);
+          }
+        }
+
+        // Update state without triggering loading
+        setStockQuotes(quotes);
+        setPortfolioData({
+          totalValue,
+          totalCash: cashBalance,
+          totalPL,
+          totalRealizedPL,
+          totalUnrealizedPL,
+          dayChange: 0,
+          holdings
+        });
+
+      } catch (err) {
+        console.warn('Polling failed:', err);
+      } finally {
+        setIsPolling(false);
+      }
+    }, POLLING_INTERVAL);
+
+    // Cleanup interval on component unmount
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [watchlist]);
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
     }).format(amount);
-  };
-
-  const formatPercent = (value) => {
-    const percent = (value / (portfolioData.totalValue - portfolioData.totalPL)) * 100;
-    return `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`;
   };
 
   if (loading) {
@@ -194,7 +298,34 @@ const Dashboard = () => {
 
   return (
     <div>
-      <h1 className="page-title">Dashboard</h1>
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h1 className="page-title" style={{ margin: 0 }}>Dashboard</h1>
+        {isPolling && (
+          <div style={{ 
+            fontSize: '0.8rem', 
+            color: '#10b981', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem' 
+          }}>
+            <div style={{ 
+              width: '12px', 
+              height: '12px', 
+              border: '2px solid #e5e7eb', 
+              borderTop: '2px solid #10b981', 
+              borderRadius: '50%', 
+              animation: 'spin 1s linear infinite' 
+            }}></div>
+            Updating data...
+          </div>
+        )}
+      </div>
       
       {/* Portfolio Summary */}
       <div className="stats-grid">

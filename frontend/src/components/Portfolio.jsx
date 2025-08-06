@@ -16,6 +16,7 @@ const Portfolio = () => {
     unrealizedPnL: 0,
     totalPnL: 0
   });
+  const [isPolling, setIsPolling] = useState(false);
   const [activeTab, setActiveTab] = useState('holdings');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,9 +25,107 @@ const Portfolio = () => {
     fetchPortfolioData();
   }, []);
 
-  const fetchPortfolioData = async () => {
+  // Add polling for real-time updates (numbers only, no UI disruption)
+  useEffect(() => {
+    const POLLING_INTERVAL = 5000; // 5 seconds
+    
+    const intervalId = setInterval(async () => {
+      console.log('Polling portfolio data...');
+      setIsPolling(true);
+      
+      try {
+        // Fetch only the essential data without triggering loading state
+        const [portfolioResponse, tradesResponse, cashResponse, comprehensivePnLResponse] = await Promise.allSettled([
+          apiService.getPortfolio(),
+          apiService.getTrades(),
+          apiService.getBalance(),
+          apiService.getComprehensivePnL()
+        ]);
+
+        // Process portfolio data
+        let totalValue = 0;
+        let holdings = [];
+        let trades = [];
+        
+        if (portfolioResponse.status === 'fulfilled' && portfolioResponse.value) {
+          const data = portfolioResponse.value;
+          
+          if (data.holdings && Array.isArray(data.holdings)) {
+            holdings = data.holdings.map(holding => ({
+              symbol: holding.symbol || holding.stock_symbol, // Handle both formats
+              companyName: holding.company_name || holding.symbol || holding.stock_symbol,
+              quantity: parseFloat(holding.quantity || 0),
+              averageCost: parseFloat(holding.average_cost || 0),
+              currentPrice: parseFloat(holding.current_price || 0),
+              marketValue: parseFloat(holding.market_value || 0),
+              costBasis: parseFloat(holding.cost_basis || 0),
+              unrealizedPnl: parseFloat(holding.unrealized_pnl || 0)
+            }));
+            
+            // Calculate total value from holdings if summary not available
+            totalValue = holdings.reduce((sum, holding) => sum + holding.marketValue, 0);
+          }
+          
+          // Use summary if available, otherwise use calculated value
+          if (data.summary) {
+            totalValue = parseFloat(data.summary.total_portfolio_value || data.summary.total_value || totalValue);
+          }
+        }
+
+        if (tradesResponse.status === 'fulfilled' && tradesResponse.value?.trades) {
+          trades = tradesResponse.value.trades;
+        }
+
+        let cashBalance = 10000;
+        if (cashResponse.status === 'fulfilled' && cashResponse.value?.cash_balance !== undefined) {
+          cashBalance = parseFloat(cashResponse.value.cash_balance);
+        }
+
+        // Process comprehensive P&L
+        let comprehensivePnLData = {
+          realizedPnL: 0,
+          unrealizedPnL: 0,
+          totalPnL: 0
+        };
+
+        if (comprehensivePnLResponse.status === 'fulfilled' && comprehensivePnLResponse.value?.summary) {
+          const summary = comprehensivePnLResponse.value.summary;
+          comprehensivePnLData = {
+            realizedPnL: parseFloat(summary.total_realized_pnl || 0),
+            unrealizedPnL: parseFloat(summary.total_unrealized_pnl || 0),
+            totalPnL: parseFloat((summary.total_realized_pnl || 0)) + parseFloat((summary.total_unrealized_pnl || 0))
+          };
+        }
+
+        // Update state without triggering loading
+        setPortfolioData({
+          totalValue,
+          totalCash: cashBalance,
+          totalPL: comprehensivePnLData.totalPnL,
+          holdings,
+          trades
+        });
+        setComprehensivePnL(comprehensivePnLData);
+
+      } catch (err) {
+        console.warn('Polling failed:', err);
+      } finally {
+        setIsPolling(false);
+      }
+    }, POLLING_INTERVAL);
+
+    // Cleanup interval on component unmount
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  const fetchPortfolioData = async (isPolling = false) => {
     try {
-      setLoading(true);
+      // Only show loading spinner if not polling (initial load or manual refresh)
+      if (!isPolling) {
+        setLoading(true);
+      }
       setError(null);
       
       // Fetch real data from database - this already includes calculated P&L and current prices
@@ -45,8 +144,8 @@ const Portfolio = () => {
       
       if (portfolioResponse.status === 'fulfilled' && portfolioResponse.value.holdings) {
         holdings = portfolioResponse.value.holdings.map(holding => ({
-          symbol: holding.stock_symbol,
-          name: `${holding.stock_symbol} Inc.`, // Could be enhanced with company names from database
+          symbol: holding.stock_symbol || holding.symbol, // Handle both formats
+          name: `${holding.stock_symbol || holding.symbol} Inc.`, // Could be enhanced with company names from database
           quantity: parseFloat(holding.quantity),
           averageCost: parseFloat(holding.average_cost),
           currentPrice: parseFloat(holding.current_price || holding.average_cost), // From database cache
@@ -149,7 +248,34 @@ const Portfolio = () => {
 
   return (
     <div>
-      <h1 className="page-title">Portfolio</h1>
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h1 className="page-title" style={{ margin: 0 }}>Portfolio</h1>
+        {isPolling && (
+          <div style={{ 
+            fontSize: '0.8rem', 
+            color: '#10b981', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem' 
+          }}>
+            <div style={{ 
+              width: '12px', 
+              height: '12px', 
+              border: '2px solid #e5e7eb', 
+              borderTop: '2px solid #10b981', 
+              borderRadius: '50%', 
+              animation: 'spin 1s linear infinite' 
+            }}></div>
+            Updating data...
+          </div>
+        )}
+      </div>
       
       {/* Portfolio Summary */}
       <div className="stats-grid">

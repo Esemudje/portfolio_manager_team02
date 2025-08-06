@@ -12,6 +12,7 @@ const Trading = () => {
   const [tradeAction, setTradeAction] = useState(searchParams.get('action') || 'buy');
   const [quantity, setQuantity] = useState(1);
   const [availableCash, setAvailableCash] = useState(10000);
+  const [isPolling, setIsPolling] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -31,6 +32,60 @@ const Trading = () => {
     
     fetchCashBalance();
   }, []);
+
+  // Add polling for cash balance and current holdings updates (numbers only, no UI disruption)
+  useEffect(() => {
+    const POLLING_INTERVAL = 5000; // 5 seconds
+    
+    const intervalId = setInterval(async () => {
+      console.log('Polling trading data...');
+      setIsPolling(true);
+      
+      try {
+        // Refresh cash balance
+        const balance = await apiService.getBalance();
+        if (balance.cash_balance !== undefined) {
+          setAvailableCash(parseFloat(balance.cash_balance));
+        }
+
+        // Refresh current holdings and stock quote if a stock is selected
+        if (selectedStock) {
+          // Fetch both updated stock quote and holdings
+          const [quoteResult, holdingsResult] = await Promise.allSettled([
+            apiService.getStockQuote(selectedStock),
+            apiService.getPortfolio(selectedStock)
+          ]);
+
+          // Update stock quote with fresh data
+          if (quoteResult.status === 'fulfilled') {
+            setStockQuote(quoteResult.value);
+          }
+
+          // Update holdings data
+          if (holdingsResult.status === 'fulfilled' && holdingsResult.value.holdings && holdingsResult.value.holdings.length > 0) {
+            const holding = holdingsResult.value.holdings[0];
+            setCurrentHolding({
+              quantity: parseFloat(holding.quantity || 0),
+              averageCost: parseFloat(holding.average_cost || 0),
+              marketValue: parseFloat(holding.market_value || 0),
+              unrealizedPnl: parseFloat(holding.unrealized_pnl || 0)
+            });
+          } else {
+            setCurrentHolding({ quantity: 0 });
+          }
+        }
+      } catch (err) {
+        console.warn('Trading polling failed:', err);
+      } finally {
+        setIsPolling(false);
+      }
+    }, POLLING_INTERVAL);
+
+    // Cleanup interval on component unmount
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [selectedStock]);
 
   // Popular stocks for quick access
   const popularStocks = [
@@ -142,10 +197,27 @@ const Trading = () => {
       if (result.message && result.message.toLowerCase().includes('successful')) {
         setSuccess(result.message);
         
-        // Update cash balance after successful trade
-        const updatedBalance = await apiService.getBalance();
-        if (updatedBalance.cash_balance !== undefined) {
-          setAvailableCash(parseFloat(updatedBalance.cash_balance));
+        // Update cash balance and holdings after successful trade
+        const [updatedBalance, updatedHoldings] = await Promise.allSettled([
+          apiService.getBalance(),
+          apiService.getPortfolio(selectedStock)
+        ]);
+        
+        if (updatedBalance.status === 'fulfilled' && updatedBalance.value.cash_balance !== undefined) {
+          setAvailableCash(parseFloat(updatedBalance.value.cash_balance));
+        }
+        
+        // Update current holdings to reflect the trade
+        if (updatedHoldings.status === 'fulfilled' && updatedHoldings.value.holdings && updatedHoldings.value.holdings.length > 0) {
+          const holding = updatedHoldings.value.holdings[0];
+          setCurrentHolding({
+            quantity: parseFloat(holding.quantity || 0),
+            averageCost: parseFloat(holding.average_cost || 0),
+            marketValue: parseFloat(holding.market_value || 0),
+            unrealizedPnl: parseFloat(holding.unrealized_pnl || 0)
+          });
+        } else {
+          setCurrentHolding({ quantity: 0 }); // No holdings left for this stock
         }
         
         setQuantity(1);
@@ -221,7 +293,34 @@ const Trading = () => {
 
   return (
     <div>
-      <h1 className="page-title">Trading</h1>
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h1 className="page-title" style={{ margin: 0 }}>Trading</h1>
+        {isPolling && (
+          <div style={{ 
+            fontSize: '0.8rem', 
+            color: '#10b981', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem' 
+          }}>
+            <div style={{ 
+              width: '12px', 
+              height: '12px', 
+              border: '2px solid #e5e7eb', 
+              borderTop: '2px solid #10b981', 
+              borderRadius: '50%', 
+              animation: 'spin 1s linear infinite' 
+            }}></div>
+            Updating data...
+          </div>
+        )}
+      </div>
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
         {/* Stock Search and Selection */}
