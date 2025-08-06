@@ -15,7 +15,7 @@ def create_app():
     # Only starting if not in reloader process (prevents duplicate threads)
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         print("Starting background price updater...")
-        start_background_price_updater(interval_minutes=0.5)  # Update every 0.5 minutes
+        start_background_price_updater(interval_minutes=0.1)
 
     @app.route("/")          # sanity check
     def health():
