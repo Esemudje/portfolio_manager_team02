@@ -49,13 +49,13 @@ CREATE TABLE IF NOT EXISTS trades (
 CREATE TABLE IF NOT EXISTS user_balance (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(50) DEFAULT 'default_user',
-    cash_balance DECIMAL(15, 2) DEFAULT 10000.00,
+    cash_balance DECIMAL(15, 2) DEFAULT 5000000.00,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_user (user_id)
 );
 
 -- Insert default cash balance
-INSERT IGNORE INTO user_balance (user_id, cash_balance) VALUES ('default_user', 10000.00);
+INSERT IGNORE INTO user_balance (user_id, cash_balance) VALUES ('default_user', 5000000.00);
 
 -- Profit and Loss tracking table (optional - for detailed P&L history)
 CREATE TABLE IF NOT EXISTS profit_and_loss (
