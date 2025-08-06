@@ -175,7 +175,7 @@ const Dashboard = () => {
 
   // Add polling for real-time updates (numbers only, no UI disruption)
   useEffect(() => {
-    const POLLING_INTERVAL = 5000; // 5 seconds
+    const POLLING_INTERVAL = 30000; // 30 seconds
     
     const intervalId = setInterval(async () => {
       console.log('Polling dashboard data...');
