@@ -24,7 +24,15 @@ const Dashboard = () => {
       setNewsLoading(true);
       
       // Fetch news related to watchlist stocks (TODO: Jay code here)
-      
+      const news = await apiService.getMarketNews();
+    console.log('News data from backend:', news);
+    setMarketNews(
+        news.map((item) => ({
+          title: item.headline,
+          source: item.reported_by,
+          time_published: new Date().toISOString() // Dummy timestamp
+        }))
+      )
     } catch (err) {
       console.error('Failed to fetch market news:', err);
     } finally {

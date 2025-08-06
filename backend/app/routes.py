@@ -7,6 +7,7 @@ from .market import (
     get_daily_data, 
     test_api_connection
 )
+from .news import get_headlines
 from .portfolio import (
     get_portfolio_summary,
     get_trade_history,
@@ -344,4 +345,21 @@ def get_owned_stocks():
         
     except Exception as e:
         print(f"Error getting owned stocks: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.get("/news")
+def get_news():
+    try:
+        print("Headline Request received")
+        headlines = get_headlines()
+
+        if isinstance(headlines, dict) and "error" in headlines:
+            return {"error": headlines["error"]}, 500
+
+        # Format the list of tuples into list of dicts for JSON response
+        formatted = [{"headline": h, "reported_by": r} for h, r in headlines]
+        return jsonify(formatted)
+
+    except Exception as e:
+        print(f"Error fetching headlines: {e}")
         return {"error": str(e)}, 500

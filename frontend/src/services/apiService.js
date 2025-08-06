@@ -175,6 +175,11 @@ const apiService = {
     const params = { days };
     if (symbol) params.symbol = symbol.toUpperCase();
     return api.get('/pnl/comprehensive', { params });
+  },
+
+  //get market news
+  getMarketNews: async () => {
+  return api.get('/news');
   }
 };
 
