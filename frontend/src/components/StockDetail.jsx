@@ -113,8 +113,8 @@ const StockDetail = () => {
     const days = getDaysFromRange(chartTimeRange);
     const timeSeries = stockData.dailyData['Time Series (Daily)'];
     return Object.entries(timeSeries)
-      .slice(0, days) // Last X days
-      .reverse()
+      .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB)) // Sort chronologically (oldest to newest)
+      .slice(-days) // Get the last X days
       .map(([date, data]) => ({
         date,
         price: parseFloat(data['4. close']),
@@ -159,8 +159,8 @@ const StockDetail = () => {
     );
 
     return Object.entries(timeSeries)
-      .slice(0, sliceSize)
-      .reverse()
+      .sort(([timeA], [timeB]) => new Date(timeA) - new Date(timeB)) // Sort chronologically (oldest to newest)
+      .slice(-sliceSize) // Get the last X data points
       .map(([timestamp, data]) => ({
         time: timestamp,
         price: parseFloat(data['4. close']),
