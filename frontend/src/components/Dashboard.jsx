@@ -208,9 +208,7 @@ const Dashboard = () => {
           <div className={`stat-value ${portfolioData.totalPL >= 0 ? 'positive' : 'negative'}`}>
             {formatCurrency(portfolioData.totalPL)}
           </div>
-          <div className="stat-label">
-            Total P&L ({formatPercent(portfolioData.totalPL)})
-          </div>
+          <div className="stat-label">Total P&L</div>
           {portfolioData.totalRealizedPL !== undefined && portfolioData.totalUnrealizedPL !== undefined && (
             <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>
               <div className={portfolioData.totalUnrealizedPL >= 0 ? 'positive' : 'negative'}>

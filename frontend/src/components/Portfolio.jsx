@@ -11,6 +11,11 @@ const Portfolio = () => {
     holdings: [],
     trades: []
   });
+  const [comprehensivePnL, setComprehensivePnL] = useState({
+    realizedPnL: 0,
+    unrealizedPnL: 0,
+    totalPnL: 0
+  });
   const [activeTab, setActiveTab] = useState('holdings');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,10 +31,11 @@ const Portfolio = () => {
       
       // Fetch real data from database - this already includes calculated P&L and current prices
       // No additional API calls needed as backend provides comprehensive portfolio data
-      const [portfolioResponse, tradesResponse, cashResponse] = await Promise.allSettled([
+      const [portfolioResponse, tradesResponse, cashResponse, comprehensivePnLResponse] = await Promise.allSettled([
         apiService.getPortfolio(),
         apiService.getTrades(),
-        apiService.getBalance()
+        apiService.getBalance(),
+        apiService.getComprehensivePnL()
       ]);
 
       // Process portfolio holdings - all data comes from database with pre-calculated values
@@ -73,6 +79,16 @@ const Portfolio = () => {
       let cashBalance = 10000; // Default fallback
       if (cashResponse.status === 'fulfilled' && cashResponse.value.cash_balance !== undefined) {
         cashBalance = parseFloat(cashResponse.value.cash_balance);
+      }
+
+      // Process comprehensive P&L data
+      if (comprehensivePnLResponse.status === 'fulfilled' && comprehensivePnLResponse.value) {
+        const pnlData = comprehensivePnLResponse.value;
+        setComprehensivePnL({
+          realizedPnL: parseFloat(pnlData.summary?.realized_pnl || 0),
+          unrealizedPnL: parseFloat(pnlData.summary?.unrealized_pnl || 0),
+          totalPnL: parseFloat(pnlData.summary?.total_pnl || 0)
+        });
       }
 
       // Portfolio data is already calculated by backend with current market prices
@@ -155,10 +171,14 @@ const Portfolio = () => {
         </div>
         
         <div className="stat-card">
-          <div className={`stat-value ${portfolioData.totalPL >= 0 ? 'positive' : 'negative'}`}>
-            {formatCurrency(portfolioData.totalPL)}
+          <div className={`stat-value ${comprehensivePnL.totalPnL >= 0 ? 'positive' : 'negative'}`}>
+            {formatCurrency(comprehensivePnL.totalPnL)}
           </div>
           <div className="stat-label">Total P&L</div>
+          <div style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '0.5rem' }}>
+            <div>Realized: {formatCurrency(comprehensivePnL.realizedPnL)}</div>
+            <div>Unrealized: {formatCurrency(comprehensivePnL.unrealizedPnL)}</div>
+          </div>
         </div>
       </div>
 

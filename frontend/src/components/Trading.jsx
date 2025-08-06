@@ -125,8 +125,27 @@ const Trading = () => {
         
         setQuantity(1);
       } else {
-        // Handle API error response
-        setError(result.error || result.message || 'Trade execution failed');
+        // Handle API error response with specific error details
+        const errorMessage = result.error || result.message || 'Trade execution failed';
+        
+        // Check for specific error types and provide user-friendly messages
+        if (errorMessage.includes('Insufficient shares')) {
+          // Parse the available and requested quantities from the error message
+          const availableMatch = errorMessage.match(/Available: ([\d.]+)/);
+          const requestedMatch = errorMessage.match(/Requested: ([\d.]+)/);
+          
+          if (availableMatch && requestedMatch) {
+            const available = parseFloat(availableMatch[1]);
+            const requested = parseFloat(requestedMatch[1]);
+            setError(`Cannot sell ${requested} shares of ${selectedStock}. You only own ${available} shares.`);
+          } else {
+            setError(`You don't own enough shares of ${selectedStock} to complete this sale.`);
+          }
+        } else if (errorMessage.includes('Insufficient funds')) {
+          setError(`Insufficient cash to buy ${quantity} shares of ${selectedStock}. ${errorMessage}`);
+        } else {
+          setError(errorMessage);
+        }
       }
       
       // Reset success message after 5 seconds
@@ -135,7 +154,26 @@ const Trading = () => {
       }
       
     } catch (err) {
-      setError(err.message || 'Failed to execute trade');
+      // Handle errors thrown by the API calls
+      let errorMessage = err.message || 'Failed to execute trade';
+      
+      // Check for specific error patterns and provide user-friendly messages
+      if (errorMessage.includes('Insufficient shares')) {
+        const availableMatch = errorMessage.match(/Available: ([\d.]+)/);
+        const requestedMatch = errorMessage.match(/Requested: ([\d.]+)/);
+        
+        if (availableMatch && requestedMatch) {
+          const available = parseFloat(availableMatch[1]);
+          const requested = parseFloat(requestedMatch[1]);
+          errorMessage = `Cannot sell ${requested} share(s) of ${selectedStock}. You only own ${available} share(s).`;
+        } else {
+          errorMessage = `You don't own enough shares of ${selectedStock} to complete this sale.`;
+        }
+      } else if (errorMessage.includes('Insufficient funds')) {
+        errorMessage = `Insufficient cash to buy ${quantity} shares of ${selectedStock}. ${errorMessage}`;
+      }
+      
+      setError(errorMessage);
       console.error('Trade error:', err);
     } finally {
       setLoading(false);

@@ -43,13 +43,13 @@ api.interceptors.response.use(
     
     switch (status) {
       case 404:
-        throw new Error(data?.error || 'Stock symbol not found');
+        throw new Error(data?.error || data?.message || 'Stock symbol not found');
       case 429:
         throw new Error('Rate limit exceeded - please wait a moment');
       case 500:
-        throw new Error(data?.error || 'Server error - please try again later');
+        throw new Error(data?.error || data?.message || 'Server error - please try again later');
       default:
-        throw new Error(data?.error || `Request failed with status ${status}`);
+        throw new Error(data?.error || data?.message || `Request failed with status ${status}`);
     }
   }
 );
