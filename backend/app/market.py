@@ -81,13 +81,25 @@ def get_stock_overview(symbol: str) -> Dict:
             except (ValueError, TypeError):
                 return "N/A"
         
-        # Helper function to format percentage
-        def format_percentage(value):
+        # Helper function to format percentage (for fields already in percentage format)
+        def format_percentage_direct(value):
+            """For fields like dividendYield that are already in percentage format"""
             if value is None or value == "N/A":
                 return "N/A"
             try:
                 num = float(value)
-                return f"{num*100:.2f}%" if num < 1 else f"{num:.2f}%"
+                return f"{num:.2f}%"
+            except (ValueError, TypeError):
+                return "N/A"
+        
+        # Helper function to format percentage (for fields in decimal format)
+        def format_percentage_decimal(value):
+            """For fields like profitMargins that are in decimal format (0.24 = 24%)"""
+            if value is None or value == "N/A":
+                return "N/A"
+            try:
+                num = float(value)
+                return f"{num*100:.2f}%"
             except (ValueError, TypeError):
                 return "N/A"
         
@@ -106,7 +118,7 @@ def get_stock_overview(symbol: str) -> Dict:
                 return "N/A"
             return description[:500] + "..." if len(description) > 500 else description
         
-        # Return only essential information for display
+        # Return comprehensive financial information for display
         overview = {
             # Basic Company Info
             "Symbol": info.get("symbol", symbol.upper()),
@@ -124,7 +136,7 @@ def get_stock_overview(symbol: str) -> Dict:
             "Beta": format_decimal(info.get("beta")),
             
             # Dividend Information
-            "DividendYield": format_percentage(info.get("dividendYield")),
+            "DividendYield": format_percentage_direct(info.get("dividendYield")),
             "DividendPerShare": format_decimal(info.get("dividendRate")),
             
             # Price Ranges
@@ -133,7 +145,26 @@ def get_stock_overview(symbol: str) -> Dict:
             
             # Valuation Metrics
             "PriceToBookRatio": format_decimal(info.get("priceToBook")),
-            "ProfitMargin": format_percentage(info.get("profitMargins")),
+            "ProfitMargin": format_percentage_decimal(info.get("profitMargins")),
+            "BookValue": format_decimal(info.get("bookValue")),
+            "PriceToSalesRatioTTM": format_decimal(info.get("priceToSalesTrailing12Months")),
+            
+            # Revenue & Profitability (TTM = Trailing Twelve Months)
+            "RevenueTTM": format_large_number(info.get("totalRevenue")),
+            "GrossProfitTTM": format_large_number(info.get("grossProfits")),
+            "EBITDA": format_large_number(info.get("ebitda")),
+            "NetIncomeTTM": format_large_number(info.get("netIncomeToCommon")),
+            
+            # Additional Financial Metrics
+            "OperatingCashflow": format_large_number(info.get("operatingCashflow")),
+            "FreeCashflow": format_large_number(info.get("freeCashflow")),
+            "TotalCash": format_large_number(info.get("totalCash")),
+            "TotalDebt": format_large_number(info.get("totalDebt")),
+            "DebtToEquity": format_decimal(info.get("debtToEquity")),
+            "CurrentRatio": format_decimal(info.get("currentRatio")),
+            "ReturnOnAssets": format_percentage_decimal(info.get("returnOnAssets")),
+            "ReturnOnEquity": format_percentage_decimal(info.get("returnOnEquity")),
+            "RevenuePerShare": format_decimal(info.get("revenuePerShare")),
             
             # Volume and Shares
             "SharesOutstanding": format_large_number(info.get("sharesOutstanding")),

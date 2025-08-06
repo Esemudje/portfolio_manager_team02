@@ -15,7 +15,7 @@ def create_app():
     # Only starting if not in reloader process (prevents duplicate threads)
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         print("Starting background price updater...")
-        start_background_price_updater(interval_minutes=0.1)
+        start_background_price_updater(interval_minutes=0.3)
 
     @app.route("/")          # sanity check
     def health():
@@ -40,6 +40,7 @@ def create_app():
             "endpoints": {
                 "quotes": "/api/stocks/<symbol>",
                 "overview": "/api/stocks/<symbol>/overview",
+                "financials": "/api/stocks/<symbol>/overview (includes financial data)",
                 "intraday": "/api/stocks/<symbol>/intraday",
                 "daily": "/api/stocks/<symbol>/daily",
                 "news": "/api/stocks/<symbol>/news",

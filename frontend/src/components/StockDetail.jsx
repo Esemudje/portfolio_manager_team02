@@ -672,11 +672,11 @@ const StockDetail = () => {
                 <h4>Revenue & Profitability</h4>
                 <table className="table">
                   <tbody>
-                    <tr><td><strong>Revenue (TTM)</strong></td><td>{formatLargeNumber(overview.RevenueTTM)}</td></tr>
-                    <tr><td><strong>Gross Profit (TTM)</strong></td><td>{formatLargeNumber(overview.GrossProfitTTM)}</td></tr>
-                    <tr><td><strong>EBITDA</strong></td><td>{formatLargeNumber(overview.EBITDA)}</td></tr>
-                    <tr><td><strong>Net Income (TTM)</strong></td><td>{formatLargeNumber(overview.NetIncomeTTM)}</td></tr>
-                    <tr><td><strong>Profit Margin</strong></td><td>{overview.ProfitMargin ? (parseFloat(overview.ProfitMargin) * 100).toFixed(2) + '%' : 'N/A'}</td></tr>
+                    <tr><td><strong>Revenue (TTM)</strong></td><td>{overview.RevenueTTM || 'N/A'}</td></tr>
+                    <tr><td><strong>Gross Profit (TTM)</strong></td><td>{overview.GrossProfitTTM || 'N/A'}</td></tr>
+                    <tr><td><strong>EBITDA</strong></td><td>{overview.EBITDA || 'N/A'}</td></tr>
+                    <tr><td><strong>Net Income (TTM)</strong></td><td>{overview.NetIncomeTTM || 'N/A'}</td></tr>
+                    <tr><td><strong>Profit Margin</strong></td><td>{overview.ProfitMargin || 'N/A'}</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -685,11 +685,10 @@ const StockDetail = () => {
                 <h4>Valuation</h4>
                 <table className="table">
                   <tbody>
-                    <tr><td><strong>Book Value</strong></td><td>{formatCurrency(overview.BookValue)}</td></tr>
+                    <tr><td><strong>Book Value</strong></td><td>{overview.BookValue || 'N/A'}</td></tr>
                     <tr><td><strong>P/B Ratio</strong></td><td>{overview.PriceToBookRatio || 'N/A'}</td></tr>
                     <tr><td><strong>P/S Ratio</strong></td><td>{overview.PriceToSalesRatioTTM || 'N/A'}</td></tr>
-                    <tr><td><strong>PEG Ratio</strong></td><td>{overview.PEGRatio || 'N/A'}</td></tr>
-                    <tr><td><strong>Dividend Yield</strong></td><td>{overview.DividendYield ? (parseFloat(overview.DividendYield) * 100).toFixed(2) + '%' : 'N/A'}</td></tr>
+                    <tr><td><strong>Dividend Yield</strong></td><td>{overview.DividendYield || 'N/A'}</td></tr>
                   </tbody>
                 </table>
               </div>
