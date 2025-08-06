@@ -82,15 +82,7 @@ INSERT INTO holdings (stock_symbol, quantity, average_cost) VALUES
     ('NVDA', 80.00, 118.30),      -- 80 shares at $118.30 avg cost
     ('TSLA', 30.00, 275.80),      -- 30 shares at $275.80 avg cost
     ('AMZN', 75.00, 172.25),      -- 75 shares at $172.25 avg cost
-    ('META', 20.00, 465.90),      -- 20 shares at $465.90 avg cost
-    ('JPM', 40.00, 198.40),       -- 40 shares at $198.40 avg cost
-    ('V', 35.00, 270.60),         -- 35 shares at $270.60 avg cost
-    ('JNJ', 60.00, 158.20),       -- 60 shares at $158.20 avg cost
-    ('WMT', 45.00, 152.80),       -- 45 shares at $152.80 avg cost
-    ('UNH', 12.00, 485.75),       -- 12 shares at $485.75 avg cost
-    ('HD', 22.00, 365.40),        -- 22 shares at $365.40 avg cost
-    ('COST', 5.00, 845.60),       -- 5 shares at $845.60 avg cost
-    ('AMD', 55.00, 142.30)        -- 55 shares at $142.30 avg cost
+    ('META', 20.00, 465.90)       -- 20 shares at $465.90 avg cost
 
 ON DUPLICATE KEY UPDATE
     quantity = VALUES(quantity),
@@ -128,36 +120,7 @@ INSERT INTO trades (stock_symbol, trade_type, price_at_trade, quantity, trade_da
     
     -- META trades (20 total shares)
     ('META', 'BUY', 445.80, 12.00, '2025-07-16 10:20:00'),
-    ('META', 'BUY', 495.00, 8.00, '2025-07-26 14:30:00'),
-    
-    -- JPM trades (40 total shares)
-    ('JPM', 'BUY', 195.60, 25.00, '2025-07-09 09:15:00'),
-    ('JPM', 'BUY', 202.80, 15.00, '2025-07-21 13:45:00'),
-    
-    -- V trades (35 total shares)
-    ('V', 'BUY', 265.30, 20.00, '2025-07-11 10:45:00'),
-    ('V', 'BUY', 278.90, 15.00, '2025-07-24 12:20:00'),
-    
-    -- JNJ trades (60 total shares)
-    ('JNJ', 'BUY', 155.40, 35.00, '2025-07-13 11:30:00'),
-    ('JNJ', 'BUY', 162.80, 25.00, '2025-07-27 14:15:00'),
-    
-    -- WMT trades (45 total shares)
-    ('WMT', 'BUY', 148.60, 25.00, '2025-07-17 09:50:00'),
-    ('WMT', 'BUY', 159.20, 20.00, '2025-07-29 13:25:00'),
-    
-    -- UNH trades (12 total shares)
-    ('UNH', 'BUY', 485.75, 12.00, '2025-07-19 10:40:00'),
-    
-    -- HD trades (22 total shares)
-    ('HD', 'BUY', 365.40, 22.00, '2025-07-23 11:55:00'),
-    
-    -- COST trades (5 total shares)
-    ('COST', 'BUY', 845.60, 5.00, '2025-07-30 15:20:00'),
-    
-    -- AMD trades (55 total shares)
-    ('AMD', 'BUY', 138.90, 30.00, '2025-07-05 10:15:00'),
-    ('AMD', 'BUY', 147.20, 25.00, '2025-07-31 12:45:00');
+    ('META', 'BUY', 495.00, 8.00, '2025-07-26 14:30:00');
 
 -- Show summary after population
 SELECT 
