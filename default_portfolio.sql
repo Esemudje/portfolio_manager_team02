@@ -70,6 +70,28 @@ CREATE TABLE IF NOT EXISTS profit_and_loss (
     INDEX idx_date (calculation_date)
 );
 
+CREATE TABLE IF NOT EXISTS news (
+	headline_id INT PRIMARY KEY AUTO_INCREMENT,
+    headline TEXT NOT NULL,
+    reported_by TEXT NOT NULL
+);
+
+-- Only run insert statement once, comment out when done to prevent duplicates
+INSERT INTO news (headline, reported_by) VALUES
+("S&P 500 falls after weak economic data and more tariff threats. The S&P 500
+ pulled back Tuesday as traders digested weaker-than-expected economic data and new tariff comments from President Donald Trump, stoking concerns about the state of the U.S. economy", "CNBC"),
+ ("Trump says pharma tariffs could eventually reach 250%", "Yahoo Finance"),
+ ("Trade school stocks soar as demand for skilled labor rises", "Bloomberg"),
+ ("Eyes on gravity SUV ramp, path to profitability for Lucid earnings", "Yahoo Finance"),
+ ("Starbucks under pressure again as Brazilian tariffs hike coffee costs", "Yahoo Finance"),
+ ("Record surge in past-due student loans adds to US debt burden", "Bloomberg"),
+ ("Gold Gains as Weaker Economic Data Boosts Fed Rate Cut Bets", "Bloomberg"),
+("From ingredient costs to sagging demand, tariffs further pinch company earnings", "Reuters"),
+("Stock market today: Dow, S&P 500, Nasdaq mixed as Wall Street eyes earnings, trade tensions", "Yahoo Finance"),
+("Palantir stock pops, Pfizer beats, Caterpillar warns of tariff impact", "Yahoo Finance");
+
+
+
 
 
 
