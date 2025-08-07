@@ -27,6 +27,12 @@ from .pnl import (
     get_comprehensive_pnl_report
 )
 from .price_updater import manual_price_update, get_owned_symbols
+from .search import (
+    search_stocks_by_name,
+    get_stock_details_by_symbol,
+    get_top_stocks_by_sector,
+    get_all_sectors
+)
 
 bp = Blueprint("api", __name__) # helps organize routes 
 
@@ -410,4 +416,70 @@ def get_news():
 
     except Exception as e:
         print(f"Error fetching headlines: {e}")
+        return {"error": str(e)}, 500
+
+# Stock Search Routes
+@bp.get("/search/stocks")
+def search_stocks():
+    """Search stocks by name or symbol"""
+    try:
+        query = request.args.get('q', '').strip()
+        limit = request.args.get('limit', 20, type=int)
+        
+        if not query or len(query) < 2:
+            return {"error": "Query must be at least 2 characters long"}, 400
+        
+        results = search_stocks_by_name(query, limit)
+        return jsonify({
+            "query": query,
+            "results": results,
+            "count": len(results)
+        })
+        
+    except Exception as e:
+        print(f"Error searching stocks: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.get("/search/stocks/<symbol>/details")
+def get_stock_info(symbol):
+    """Get detailed information for a specific stock symbol"""
+    try:
+        stock_info = get_stock_details_by_symbol(symbol.upper())
+        
+        if not stock_info:
+            return {"error": "Stock not found"}, 404
+        
+        return jsonify(stock_info)
+        
+    except Exception as e:
+        print(f"Error getting stock details for {symbol}: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.get("/search/sectors")
+def get_sectors():
+    """Get all available sectors"""
+    try:
+        sectors = get_all_sectors()
+        return jsonify({"sectors": sectors})
+        
+    except Exception as e:
+        print(f"Error getting sectors: {str(e)}")
+        return {"error": str(e)}, 500
+
+@bp.get("/search/top-stocks")
+def get_top_stocks():
+    """Get top stocks by market cap, optionally filtered by sector"""
+    try:
+        sector = request.args.get('sector')
+        limit = request.args.get('limit', 10, type=int)
+        
+        results = get_top_stocks_by_sector(sector, limit)
+        return jsonify({
+            "sector": sector,
+            "results": results,
+            "count": len(results)
+        })
+        
+    except Exception as e:
+        print(f"Error getting top stocks: {str(e)}")
         return {"error": str(e)}, 500

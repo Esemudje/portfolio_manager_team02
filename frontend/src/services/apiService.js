@@ -194,6 +194,27 @@ const apiService = {
       amount: parseFloat(amount),
       user_id: userId
     });
+  },
+
+  // Stock Search API methods
+  searchStocks: async (query, limit = 20) => {
+    return api.get('/search/stocks', {
+      params: { q: query, limit }
+    });
+  },
+
+  getStockDetails: async (symbol) => {
+    return api.get(`/search/stocks/${symbol}/details`);
+  },
+
+  getSectors: async () => {
+    return api.get('/search/sectors');
+  },
+
+  getTopStocks: async (sector = null, limit = 10) => {
+    const params = { limit };
+    if (sector) params.sector = sector;
+    return api.get('/search/top-stocks', { params });
   }
 };
 

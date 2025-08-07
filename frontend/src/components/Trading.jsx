@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import apiService from '../services/apiService';
+import StockSearchDropdown from './StockSearchDropdown';
 
 const Trading = () => {
   const [searchParams] = useSearchParams();
@@ -106,14 +107,22 @@ const Trading = () => {
     }
   }, [searchParams]);
 
-  const handleStockSelect = async (symbol) => {
+  const handleStockSelect = async (symbol, stockDetails = null) => {
+    if (!symbol) return;
+    
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    setSelectedStock(symbol.toUpperCase());
+    
+    // If we have stock details from search, we can display additional info
+    if (stockDetails) {
+      // You could use stockDetails.name, stockDetails.sector, etc. for enhanced display
+      console.log('Stock details:', stockDetails);
+    }
+
     try {
-      setLoading(true);
-      setError(null);
-      setSelectedStock(symbol);
-      setCurrentHolding(null); // Reset holding info
-      
-      // Fetch both stock quote and current holdings
+      // Fetch both stock quote and current holdings in parallel
       const [quoteResult, holdingsResult] = await Promise.allSettled([
         apiService.getStockQuote(symbol),
         apiService.getPortfolio(symbol) // Get portfolio data for this specific symbol
@@ -327,22 +336,11 @@ const Trading = () => {
         <div className="card">
           <h2 className="card-title">Select Stock</h2>
           
-          {/* Search */}
-          <form onSubmit={handleSearch} className="search-container">
-            <div style={{ position: 'relative' }}>
-              <Search className="search-icon" size={20} />
-              <input
-                type="text"
-                className="search-input"
-                placeholder="Enter stock symbol (e.g., AAPL, GOOGL)"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ marginTop: '0.5rem' }}>
-              Search
-            </button>
-          </form>
+          {/* Enhanced Search */}
+          <StockSearchDropdown 
+            onStockSelect={handleStockSelect}
+            className="search-container"
+          />
 
           {/* Popular Stocks */}
           <div style={{ marginTop: '2rem' }}>

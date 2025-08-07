@@ -76,6 +76,18 @@ CREATE TABLE IF NOT EXISTS news (
     reported_by TEXT NOT NULL
 );
 
+-- NASDAQ Companies table for search functionality
+CREATE TABLE IF NOT EXISTS nasdaq_companies (
+  Symbol VARCHAR(10) NOT NULL,
+  Name   VARCHAR(255) NOT NULL,
+  Sector VARCHAR(128),
+  MarketCap BIGINT,
+  PRIMARY KEY (Symbol),
+  INDEX idx_name (Name),
+  INDEX idx_sector (Sector),
+  INDEX idx_marketcap (MarketCap)
+);
+
 -- Only run insert statement once, comment out when done to prevent duplicates
 INSERT INTO news (headline, reported_by) VALUES
 ("S&P 500 falls after weak economic data and more tariff threats. The S&P 500

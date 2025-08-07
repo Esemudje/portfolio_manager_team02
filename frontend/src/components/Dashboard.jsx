@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import apiService from '../services/apiService';
+import StockSearchDropdown from './StockSearchDropdown';
 
 
 const Dashboard = () => {
@@ -57,7 +58,7 @@ const Dashboard = () => {
 }, []);
 
   // Watchlist management functions
-  const addToWatchlist = async (symbol) => {
+  const addToWatchlist = async (symbol, stockDetails = null) => {
     const upperSymbol = symbol.toUpperCase().trim();
     
     if (!upperSymbol) {
@@ -85,6 +86,11 @@ const Dashboard = () => {
           ...prev,
           [upperSymbol]: quote
         }));
+        
+        // If we have stock details, we could show a success message with company name
+        if (stockDetails) {
+          console.log(`Added ${stockDetails.name} (${upperSymbol}) to watchlist`);
+        }
       } else {
         setError(`Invalid stock symbol: ${upperSymbol}`);
       }
@@ -557,30 +563,12 @@ const DarkModeToggle = () => {
             <Link to="/trading" className="btn btn-primary">Trade</Link>
           </div>
           
-          {/* Add Stock Form */}
+          {/* Add Stock Form with Enhanced Search */}
           <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
-            <form onSubmit={handleAddStockSubmit} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <input
-                type="text"
-                placeholder="Enter stock symbol (e.g., AAPL)"
-                value={newStockSymbol}
-                onChange={(e) => setNewStockSymbol(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '0.5rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '0.375rem',
-                  fontSize: '0.875rem'
-                }}
-              />
-              <button
-                type="submit"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-              >
-                Add
-              </button>
-            </form>
+            <StockSearchDropdown 
+              onStockSelect={addToWatchlist}
+              className="watchlist-search"
+            />
           </div>
           
           <div className="stock-list">
