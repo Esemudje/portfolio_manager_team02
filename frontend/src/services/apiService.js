@@ -1,11 +1,11 @@
-import axios from 'axios';
+import axios from "axios";
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: '/api', // This will use the proxy configured in package.json
+  baseURL: "/api", // This will use the proxy configured in package.json
   timeout: 30000, // 30 second timeout
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -16,7 +16,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('API Request Error:', error);
+    console.error("API Request Error:", error);
     return Promise.reject(error);
   }
 );
@@ -28,28 +28,36 @@ api.interceptors.response.use(
     return response.data;
   },
   (error) => {
-    console.error('API Response Error:', error.response?.data || error.message);
-    
+    console.error("API Response Error:", error.response?.data || error.message);
+
     // Handle different types of errors
-    if (error.code === 'ECONNABORTED') {
-      throw new Error('Request timeout - please try again');
+    if (error.code === "ECONNABORTED") {
+      throw new Error("Request timeout - please try again");
     }
-    
+
     if (!error.response) {
-      throw new Error('Network error - please check your connection');
+      throw new Error("Network error - please check your connection");
     }
-    
+
     const { status, data } = error.response;
-    
+
     switch (status) {
       case 404:
-        throw new Error(data?.error || data?.message || 'Stock symbol not found');
+        throw new Error(
+          data?.error || data?.message || "Stock symbol not found"
+        );
       case 429:
-        throw new Error('Rate limit exceeded - please wait a moment');
+        throw new Error("Rate limit exceeded - please wait a moment");
       case 500:
-        throw new Error(data?.error || data?.message || 'Server error - please try again later');
+        throw new Error(
+          data?.error ||
+            data?.message ||
+            "Server error - please try again later"
+        );
       default:
-        throw new Error(data?.error || data?.message || `Request failed with status ${status}`);
+        throw new Error(
+          data?.error || data?.message || `Request failed with status ${status}`
+        );
     }
   }
 );
@@ -57,7 +65,7 @@ api.interceptors.response.use(
 const apiService = {
   // Test API connection
   testConnection: async () => {
-    return api.get('/test-connection');
+    return api.get("/test-connection");
   },
 
   // Database-first stock quote (uses cached data when available)
@@ -77,9 +85,9 @@ const apiService = {
   },
 
   // Get intraday data
-  getIntradayData: async (symbol, interval = '5min') => {
+  getIntradayData: async (symbol, interval = "5min") => {
     return api.get(`/stocks/${symbol}/intraday`, {
-      params: { interval }
+      params: { interval },
     });
   },
 
@@ -100,53 +108,88 @@ const apiService = {
   },
 
   // Portfolio Management Functions - Connected to MySQL Database
-  
+
   // Get complete portfolio summary with holdings and P&L
   getPortfolio: async (symbol = null) => {
     const params = symbol ? { symbol } : {};
-    return api.get('/portfolio', { params });
+    return api.get("/portfolio", { params });
   },
 
   // Get trade history
   getTrades: async (symbol = null, limit = 50) => {
     const params = { limit };
     if (symbol) params.symbol = symbol;
-    return api.get('/portfolio/trades', { params });
+    return api.get("/portfolio/trades", { params });
   },
 
   // Get current cash balance
-  getBalance: async (userId = 'default_user') => {
-    return api.get('/portfolio/cash', { 
-      params: { user_id: userId } 
+  getBalance: async (userId = "default_user") => {
+    return api.get("/portfolio/cash", {
+      params: { user_id: userId },
     });
   },
 
   // Get portfolio performance metrics
   getPerformance: async (days = 30) => {
-    return api.get('/portfolio/performance', { 
-      params: { days } 
+    return api.get("/portfolio/performance", {
+      params: { days },
     });
   },
 
   // Trading Functions - Execute real trades
-  
-  // Execute buy order
-  buyStock: async (symbol, quantity, cash = null, userId = 'default_user') => {
-    return api.post('/trade/buy', {
+
+  // Execute buy order (legacy)
+  buyStock: async (symbol, quantity, cash = null, userId = "default_user") => {
+    return api.post("/trade/buy", {
       symbol: symbol.toUpperCase(),
       quantity: parseInt(quantity),
       cash,
-      user_id: userId
+      user_id: userId,
     });
   },
 
-  // Execute sell order
-  sellStock: async (symbol, quantity, userId = 'default_user') => {
-    return api.post('/trade/sell', {
+  // Execute sell order (legacy)
+  sellStock: async (symbol, quantity, userId = "default_user") => {
+    return api.post("/trade/sell", {
       symbol: symbol.toUpperCase(),
       quantity: parseInt(quantity),
-      user_id: userId
+      user_id: userId,
     });
+  },
+
+  // Enhanced order placement with order types
+  placeOrder: async (orderData) => {
+    return api.post("/orders", {
+      symbol: orderData.symbol.toUpperCase(),
+      side: orderData.side.toUpperCase(),
+      quantity: parseInt(orderData.quantity),
+      order_type: orderData.orderType.toUpperCase(),
+      price: orderData.price ? parseFloat(orderData.price) : null,
+      stop_price: orderData.stopPrice ? parseFloat(orderData.stopPrice) : null,
+      limit_price: orderData.limitPrice
+        ? parseFloat(orderData.limitPrice)
+        : null,
+      user_id: orderData.userId || "default_user",
+    });
+  },
+
+  // Get pending orders
+  getPendingOrders: async (userId = "default_user", symbol = null) => {
+    const params = new URLSearchParams({ user_id: userId });
+    if (symbol) {
+      params.append("symbol", symbol.toUpperCase());
+    }
+    return api.get(`/orders?${params.toString()}`);
+  },
+
+  // Cancel an order
+  cancelOrder: async (orderId, userId = "default_user") => {
+    return api.delete(`/orders/${orderId}?user_id=${userId}`);
+  },
+
+  // Manually trigger order execution check
+  checkOrderExecution: async () => {
+    return api.post("/orders/check-execution");
   },
 
   // Get FIFO holdings information for a symbol
@@ -155,51 +198,51 @@ const apiService = {
   },
 
   // P&L Functions
-  
+
   // Get unrealized P&L for all holdings or specific symbol
-  getUnrealizedPnL: async (symbol = null, userId = 'default_user') => {
+  getUnrealizedPnL: async (symbol = null, userId = "default_user") => {
     const params = { user_id: userId };
     if (symbol) params.symbol = symbol.toUpperCase();
-    return api.get('/pnl/unrealized', { params });
+    return api.get("/pnl/unrealized", { params });
   },
 
   // Get realized P&L summary
   getRealizedPnL: async (symbol = null, days = 30) => {
     const params = { days };
     if (symbol) params.symbol = symbol.toUpperCase();
-    return api.get('/pnl/realized', { params });
+    return api.get("/pnl/realized", { params });
   },
 
   // Get comprehensive P&L report (realized + unrealized)
   getComprehensivePnL: async (symbol = null, days = 30) => {
     const params = { days };
     if (symbol) params.symbol = symbol.toUpperCase();
-    return api.get('/pnl/comprehensive', { params });
+    return api.get("/pnl/comprehensive", { params });
   },
 
   //get market news
   getMarketNews: async () => {
-  return api.get('/news');
+    return api.get("/news");
   },
 
-  depositCash: async (amount, userId = 'default_user') => {
-    return api.post('/portfolio/cash/deposit', {
+  depositCash: async (amount, userId = "default_user") => {
+    return api.post("/portfolio/cash/deposit", {
       amount: parseFloat(amount),
-      user_id: userId
+      user_id: userId,
     });
   },
 
-  withdrawCash: async (amount, userId = 'default_user') => {
-    return api.post('/portfolio/cash/withdraw', {
+  withdrawCash: async (amount, userId = "default_user") => {
+    return api.post("/portfolio/cash/withdraw", {
       amount: parseFloat(amount),
-      user_id: userId
+      user_id: userId,
     });
   },
 
   // Stock Search API methods
   searchStocks: async (query, limit = 20) => {
-    return api.get('/search/stocks', {
-      params: { q: query, limit }
+    return api.get("/search/stocks", {
+      params: { q: query, limit },
     });
   },
 
@@ -208,15 +251,14 @@ const apiService = {
   },
 
   getSectors: async () => {
-    return api.get('/search/sectors');
+    return api.get("/search/sectors");
   },
 
   getTopStocks: async (sector = null, limit = 10) => {
     const params = { limit };
     if (sector) params.sector = sector;
-    return api.get('/search/top-stocks', { params });
-  }
+    return api.get("/search/top-stocks", { params });
+  },
 };
-
 
 export default apiService;
