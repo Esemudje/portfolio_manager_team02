@@ -374,6 +374,33 @@ const Dashboard = () => {
     }).format(amount);
   };
 
+const DarkModeToggle = () => {
+  const [darkMode, setDarkMode] = useState(() => {
+    // Read initial value from localStorage
+    return localStorage.getItem('darkMode') === 'true';
+  });
+
+  useEffect(() => {
+    document.body.classList.toggle('dark', darkMode);
+    localStorage.setItem('darkMode', darkMode);
+  }, [darkMode]);
+
+
+    const toggleDarkMode = () => {
+      setDarkMode(!darkMode); //actually toggles the state
+  }
+  return (
+    <div className="dark-mode-toggle">
+      <label className="switch">
+        <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
+        <span className="slider"></span>
+      </label>
+      <span className='darkmode'> Dark Mode</span>
+    </div>
+  );
+
+  };
+
   if (loading) {
     return <div className="loading">Loading dashboard...</div>;
   }
@@ -390,6 +417,7 @@ const Dashboard = () => {
           100% { transform: rotate(360deg); }
         }
       `}</style>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 className="page-title" style={{ margin: 0 }}>Dashboard</h1>
         {isPolling && (
@@ -412,7 +440,13 @@ const Dashboard = () => {
           </div>
         )}
       </div>
-      
+
+
+
+<div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+  <DarkModeToggle />
+</div>
+
       {/* Portfolio Summary */}
       <div className="stats-grid">
         <div className="stat-card">
@@ -603,6 +637,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+      
 
       {/* Market News Section */}
       <div className="card" style={{ marginTop: '2rem' }}>

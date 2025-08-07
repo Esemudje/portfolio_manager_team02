@@ -1,3 +1,4 @@
+
 * {
   margin: 0;
   padding: 0;
@@ -282,4 +283,116 @@ code {
   .container {
     padding: 0 1rem;
   }
+}
+
+/* Dark Mode */
+.dark-mode-toggle {
+  top: 2rem;
+  right: 2rem;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  top: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.4s;
+}
+
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+input:checked + .slider::before {
+  transform: translateX(26px);
+}
+
+input:checked + .slider {
+  background-color: #040320; /* Optional: purple when on */
+}
+
+.dark{
+  background-color: #1e293b;
+  color: #f1f5f9;
+}
+
+body.dark .card {
+  background-color: #1f1f1f;
+  color: #e0e0e0;
+  border-color: #333;
+}
+
+/* Links in dark mode */
+body.dark a {
+  color: #8ab4f8;
+}
+
+/* Buttons in dark mode */
+body.dark .btn {
+  background-color: #333;
+  color: #eee;
+  border-color: #555;
+}
+
+body.dark .stat-label{
+  color: #e7e9ed;
+}
+
+body.dark .stat-value {
+  color: #3c76b3;
+}
+
+body.dark .stat-card{
+  background-color: #1f1f1f;
+}
+
+body.dark .nav-link {
+  color: #e0e0e0;
+}
+
+body.dark .card-title{
+  color: #e0e0e0;
+}
+
+body.dark .stock-current-price {
+  color: #3b82f6;
+}
+
+
+.darkmode {
+  font-size: 1rem;
+  color: #374151;
+  margin-left: 0.5rem;
+}
+
+body.dark .darkmode {
+  color: #fcf8f8;
+
 }
