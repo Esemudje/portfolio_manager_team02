@@ -192,10 +192,12 @@ const Dashboard = () => {
         cashBalance = parseFloat(cashResponse.value.cash_balance);
       }
 
-      // Fetch quotes for watchlist stocks with intelligent caching
+      // Fetch quotes for watchlist stocks and holdings with intelligent caching
       // First try database-only, then fallback to API if needed
       const quotes = {};
-      for (const symbol of watchlist) {
+      const allSymbols = [...new Set([...watchlist, ...holdings.map(h => h.symbol)])]; // Combine and deduplicate
+      
+      for (const symbol of allSymbols) {
         try {
           // Use database-first approach (backend automatically handles this)
           const quote = await apiService.getStockQuote(symbol);
@@ -330,9 +332,11 @@ const Dashboard = () => {
           cashBalance = parseFloat(cashResponse.value.cash_balance);
         }
 
-        // Update watchlist quotes
+        // Update watchlist quotes and holdings quotes
         const quotes = {};
-        for (const symbol of watchlist) {
+        const allSymbols = [...new Set([...watchlist, ...holdings.map(h => h.symbol)])]; // Combine and deduplicate
+        
+        for (const symbol of allSymbols) {
           try {
             const quote = await apiService.getStockQuote(symbol);
             quotes[symbol] = quote;
@@ -510,12 +514,18 @@ const DarkModeToggle = () => {
                 </thead>
                 <tbody>
                   {portfolioData.holdings.map((holding, index) => {
+                    // Use fresh stock quote if available, otherwise fall back to database price
+                    const freshQuote = stockQuotes[holding.symbol];
+                    const currentPrice = freshQuote ? 
+                      parseFloat(freshQuote['05. price'] || freshQuote.current_price || holding.currentPrice) : 
+                      holding.currentPrice;
+                    
                     // Use pre-calculated values from database
                     const marketValue = holding.marketValue;
                     const pl = holding.unrealizedPnl;
                     
-                    // Calculate change amount and percentage
-                    const changeAmount = holding.currentPrice - holding.averageCost;
+                    // Calculate change amount and percentage using fresh price
+                    const changeAmount = currentPrice - holding.averageCost;
                     const changePercent = holding.averageCost > 0 ? ((changeAmount / holding.averageCost) * 100) : 0;
                     
                     return (
@@ -527,7 +537,7 @@ const DarkModeToggle = () => {
                         </td>
                         <td>{holding.quantity}</td>
                         <td>{formatCurrency(holding.averageCost)}</td>
-                        <td>{formatCurrency(holding.currentPrice)}</td>
+                        <td>{formatCurrency(currentPrice)}</td>
                         <td className={changeAmount >= 0 ? 'positive' : 'negative'}>
                           {changeAmount >= 0 ? '+' : ''}{formatCurrency(changeAmount)}
                         </td>
