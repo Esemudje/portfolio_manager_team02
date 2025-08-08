@@ -5,7 +5,6 @@ import Portfolio from './components/Portfolio.jsx';
 import Trading from './components/Trading.jsx';
 import EnhancedTrading from './components/EnhancedTrading.jsx';
 import StockDetail from './components/StockDetail.jsx';
-import DatabaseTest from './components/DatabaseTest.jsx';
 import './App.css';
 import ManageCash from './components/ManageCash.jsx';
 
@@ -50,14 +49,6 @@ function Navigation() {
                 Enhanced Trading
               </Link>
             </li>
-            <li>
-              <Link 
-                to="/test" 
-                className={`nav-link ${location.pathname === '/test' ? 'active' : ''}`}
-              >
-                DB Test
-              </Link>
-            </li>
 
             <li>
               <Link 
@@ -87,7 +78,6 @@ function App() {
             <Route path="/trading" element={<Trading />} />
             <Route path="/enhanced-trading" element={<EnhancedTrading />} />
             <Route path="/stock/:symbol" element={<StockDetail />} />
-            <Route path="/test" element={<DatabaseTest />} />
             <Route path="/cash" element={<ManageCash/>} />
           </Routes>
         </main>
