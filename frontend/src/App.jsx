@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import Dashboard from './components/Dashboard.jsx';
 import Portfolio from './components/Portfolio.jsx';
 import Trading from './components/Trading.jsx';
-import EnhancedTrading from './components/EnhancedTrading.jsx';
 import StockDetail from './components/StockDetail.jsx';
 import './App.css';
 import ManageCash from './components/ManageCash.jsx';
@@ -41,14 +40,6 @@ function Navigation() {
                 Trading
               </Link>
             </li>
-            <li>
-              <Link 
-                to="/enhanced-trading" 
-                className={`nav-link ${location.pathname === '/enhanced-trading' ? 'active' : ''}`}
-              >
-                Enhanced Trading
-              </Link>
-            </li>
 
             <li>
               <Link 
@@ -76,7 +67,6 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/trading" element={<Trading />} />
-            <Route path="/enhanced-trading" element={<EnhancedTrading />} />
             <Route path="/stock/:symbol" element={<StockDetail />} />
             <Route path="/cash" element={<ManageCash/>} />
           </Routes>

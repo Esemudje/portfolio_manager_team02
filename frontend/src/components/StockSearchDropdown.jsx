@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, TrendingUp, DollarSign, Building2 } from 'lucide-react';
+import { Search, DollarSign, Building2 } from 'lucide-react';
 import apiService from '../services/apiService';
 
 const StockSearchDropdown = ({ onStockSelect, className = '' }) => {
@@ -66,6 +66,9 @@ const StockSearchDropdown = ({ onStockSelect, className = '' }) => {
       case 'Escape':
         setShowResults(false);
         setSelectedIndex(-1);
+        break;
+      default:
+        // Handle other keys if needed
         break;
     }
   };

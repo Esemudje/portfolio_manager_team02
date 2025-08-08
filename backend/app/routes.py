@@ -21,7 +21,7 @@ from .buy import buy_stock, get_stock_quote, validate_buy_request
 from .sell import sell_stock, get_fifo_holdings
 from .buyRequest import buyRequest
 from .sellRequest import sellRequest
-from .order_request import OrderRequest, OrderType, OrderSide, create_market_order, create_limit_order, create_stop_order, create_stop_limit_order
+from .order_request import OrderRequest, OrderType, OrderSide, create_market_order
 from .order_manager import OrderManager
 from .pnl import (
     calculate_unrealized_pnl, 
@@ -306,22 +306,19 @@ def place_order():
         if not data:
             return {"error": "No data provided"}, 400
         
-        # Validate required fields
-        required_fields = ['symbol', 'side', 'quantity', 'order_type']
+        # Validate required fields (removed price since we only support market orders)
+        required_fields = ['symbol', 'side', 'quantity']
         for field in required_fields:
             if field not in data:
                 return {"error": f"{field} is required"}, 400
         
-        # Create order request
+        # Create order request (all orders are market orders)
         try:
             order_request = OrderRequest(
                 symbol=data['symbol'],
                 side=OrderSide(data['side'].upper()),
                 quantity=int(data['quantity']),
-                order_type=OrderType(data['order_type'].upper()),
-                price=data.get('price'),
-                stop_price=data.get('stop_price'),
-                limit_price=data.get('limit_price'),
+                order_type=OrderType.MARKET,
                 user_id=data.get('user_id', 'default_user')
             )
         except ValueError as e:
@@ -341,51 +338,6 @@ def place_order():
             
     except Exception as e:
         print(f"Error placing order: {str(e)}")
-        return {"error": str(e)}, 500
-
-@bp.get("/orders")
-def get_orders():
-    """Get pending orders for a user"""
-    try:
-        user_id = request.args.get('user_id', 'default_user')
-        symbol = request.args.get('symbol')
-        
-        orders = OrderManager.get_pending_orders(user_id, symbol)
-        
-        return jsonify({
-            "orders": orders,
-            "count": len(orders)
-        })
-        
-    except Exception as e:
-        print(f"Error getting orders: {str(e)}")
-        return {"error": str(e)}, 500
-
-@bp.delete("/orders/<int:order_id>")
-def cancel_order(order_id):
-    """Cancel a pending order"""
-    try:
-        user_id = request.args.get('user_id', 'default_user')
-        
-        result = OrderManager.cancel_order(order_id, user_id)
-        
-        if result.get('success'):
-            return jsonify(result)
-        else:
-            return jsonify(result), 400
-            
-    except Exception as e:
-        print(f"Error cancelling order: {str(e)}")
-        return {"error": str(e)}, 500
-
-@bp.post("/orders/check-execution")
-def check_order_execution():
-    """Manually trigger order execution check (for testing)"""
-    try:
-        OrderManager.check_and_execute_pending_orders()
-        return jsonify({"message": "Order execution check completed"})
-    except Exception as e:
-        print(f"Error checking order execution: {str(e)}")
         return {"error": str(e)}, 500
 
 @bp.get("/trade/holdings/<symbol>")

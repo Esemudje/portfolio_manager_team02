@@ -19,17 +19,12 @@ A comprehensive portfolio management application built for tracking investments,
 - Holdings management with average cost basis
 - Cash balance management with deposit/withdrawal capabilities
 
-### 💹 **Enhanced Trading Interface**
+### 💹 **Trading Interface**
 
-- **Multiple Order Types**: Support for Market, Limit, Stop, and Stop-Limit orders
-- **Market Orders**: Buy/sell immediately at current market price for speed
-- **Limit Orders**: Buy/sell only at specified price or better for price control
-- **Stop Orders**: Trigger market order when stop price is reached for loss protection
-- **Stop-Limit Orders**: Trigger limit order when stop price is reached for precise control
-- **Pending Order Management**: View and cancel pending orders
-- **Real-time Order Execution**: Background service monitors and executes orders
+- **Market Orders**: Buy/sell immediately at current market price
+- **Real-time Order Execution**: Orders execute instantly at market price
 - **Order Validation**: Comprehensive validation and error handling
-- **Enhanced UI**: Modern interface with order type selection and visual indicators
+- **Simple UI**: Clean interface focused on market order execution
 
 ### 📋 **Watchlist**
 
@@ -251,13 +246,13 @@ GET /api/search/top-stocks?sector={sector}&limit={limit}
 
 Get top stocks by market cap, optionally filtered by sector.
 
-### Enhanced Trading Endpoints with Order Types
+### Trading Endpoints
 
 ```
 POST /api/orders
 ```
 
-Place an order with specified order type. Supports Market, Limit, Stop, and Stop-Limit orders.
+Place a market order.
 
 **Request Body:**
 
@@ -266,10 +261,6 @@ Place an order with specified order type. Supports Market, Limit, Stop, and Stop
   "symbol": "AAPL",
   "side": "BUY",
   "quantity": 10,
-  "order_type": "LIMIT",
-  "price": 150.0,
-  "stop_price": null,
-  "limit_price": null,
   "user_id": "default_user"
 }
 ```
@@ -277,27 +268,6 @@ Place an order with specified order type. Supports Market, Limit, Stop, and Stop
 **Order Types:**
 
 - `MARKET`: Execute immediately at current market price
-- `LIMIT`: Execute only at specified price or better (requires `price`)
-- `STOP`: Trigger market order when `stop_price` is reached
-- `STOP_LIMIT`: Trigger limit order at `limit_price` when `stop_price` is reached
-
-```
-GET /api/orders?user_id={userId}&symbol={symbol}
-```
-
-Get pending orders for a user, optionally filtered by symbol.
-
-```
-DELETE /api/orders/{orderId}?user_id={userId}
-```
-
-Cancel a pending order.
-
-```
-POST /api/orders/check-execution
-```
-
-Manually trigger order execution check (for testing).
 
 ### Legacy Trading Endpoints
 
@@ -337,42 +307,13 @@ The application now includes an enhanced database schema with NASDAQ companies d
 - `user_balance`: Cash balance management
 - `nasdaq_companies`: 6000+ companies with symbols, names, sectors, and market caps
 
-### Enhanced Order Management Tables
-
-- `orders`: Pending orders with support for different order types
-  - Order types: MARKET, LIMIT, STOP, STOP_LIMIT
-  - Order status: PENDING, FILLED, CANCELLED, EXPIRED
-  - Time in force: DAY, GTC (Good Till Cancelled)
-  - Price fields for limit and stop prices
-
-### Order Type Examples
+### Trading Examples
 
 **Market Order**
 
 ```sql
-INSERT INTO orders (stock_symbol, order_type, side, quantity, status)
-VALUES ('AAPL', 'MARKET', 'BUY', 10, 'PENDING');
-```
-
-**Limit Order**
-
-```sql
-INSERT INTO orders (stock_symbol, order_type, side, quantity, price, status)
-VALUES ('AAPL', 'LIMIT', 'BUY', 10, 150.00, 'PENDING');
-```
-
-**Stop Order**
-
-```sql
-INSERT INTO orders (stock_symbol, order_type, side, quantity, stop_price, status)
-VALUES ('AAPL', 'STOP', 'SELL', 10, 140.00, 'PENDING');
-```
-
-**Stop-Limit Order**
-
-```sql
-INSERT INTO orders (stock_symbol, order_type, side, quantity, stop_price, limit_price, status)
-VALUES ('AAPL', 'STOP_LIMIT', 'SELL', 10, 140.00, 138.00, 'PENDING');
+INSERT INTO trades (stock_symbol, trade_type, quantity, price_at_trade)
+VALUES ('AAPL', 'BUY', 10, 150.00);
 ```
 
 ### Search Features

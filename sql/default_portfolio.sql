@@ -40,15 +40,12 @@ CREATE TABLE IF NOT EXISTS trades (
     price_at_trade DECIMAL(10, 2) NOT NULL,
     trade_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     realized_pnl DECIMAL(10, 2) NULL,
-    order_id INT NULL,
-    order_type ENUM('MARKET', 'LIMIT', 'STOP', 'STOP_LIMIT') DEFAULT 'MARKET',
     
     -- Indexes for performance
     INDEX idx_symbol (stock_symbol),
     INDEX idx_type (trade_type),
     INDEX idx_date (trade_date),
     INDEX idx_symbol_date (stock_symbol, trade_date),
-    INDEX idx_order_id (order_id),
     INDEX idx_composite_filter (stock_symbol, trade_type, trade_date)
 );
 

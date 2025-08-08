@@ -157,39 +157,14 @@ const apiService = {
     });
   },
 
-  // Enhanced order placement with order types
+  // Enhanced order placement (market orders only)
   placeOrder: async (orderData) => {
     return api.post("/orders", {
       symbol: orderData.symbol.toUpperCase(),
       side: orderData.side.toUpperCase(),
       quantity: parseInt(orderData.quantity),
-      order_type: orderData.orderType.toUpperCase(),
-      price: orderData.price ? parseFloat(orderData.price) : null,
-      stop_price: orderData.stopPrice ? parseFloat(orderData.stopPrice) : null,
-      limit_price: orderData.limitPrice
-        ? parseFloat(orderData.limitPrice)
-        : null,
       user_id: orderData.userId || "default_user",
     });
-  },
-
-  // Get pending orders
-  getPendingOrders: async (userId = "default_user", symbol = null) => {
-    const params = new URLSearchParams({ user_id: userId });
-    if (symbol) {
-      params.append("symbol", symbol.toUpperCase());
-    }
-    return api.get(`/orders?${params.toString()}`);
-  },
-
-  // Cancel an order
-  cancelOrder: async (orderId, userId = "default_user") => {
-    return api.delete(`/orders/${orderId}?user_id=${userId}`);
-  },
-
-  // Manually trigger order execution check
-  checkOrderExecution: async () => {
-    return api.post("/orders/check-execution");
   },
 
   // Get FIFO holdings information for a symbol

@@ -1,23 +1,19 @@
 import mysql.connector
 import datetime
 from typing import List, Dict, Optional, Tuple
-from .order_request import OrderRequest, OrderType, OrderSide, OrderStatus, TimeInForce
+from .order_request import OrderRequest, OrderType, OrderSide, OrderStatus
 from .utils import get_db_connection, get_current_price
 from .portfolio import get_cash_balance, update_cash_balance
 
 class OrderManager:
-    """Manages different order types and their execution"""
+    """Manages market order execution"""
     
     @staticmethod
     def place_order(order_request: OrderRequest) -> Dict:
-        """Place an order (market orders execute immediately, others go to pending)"""
+        """Place a market order (executes immediately)"""
         try:
-            if order_request.order_type == OrderType.MARKET:
-                # Market orders execute immediately
-                return OrderManager._execute_market_order(order_request)
-            else:
-                # Other orders go to pending orders table
-                return OrderManager._save_pending_order(order_request)
+            # All orders are market orders and execute immediately
+            return OrderManager._execute_market_order(order_request)
         except Exception as e:
             return {"error": f"Failed to place order: {str(e)}"}
 
@@ -70,12 +66,12 @@ class OrderManager:
                 
                 # Insert trade record
                 trade_query = """
-                    INSERT INTO trades (stock_symbol, trade_type, price_at_trade, quantity, trade_date, order_type)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO trades (stock_symbol, trade_type, price_at_trade, quantity, trade_date)
+                    VALUES (%s, %s, %s, %s, %s)
                 """
                 cursor.execute(trade_query, (
                     order_request.symbol, 'BUY', price, order_request.quantity, 
-                    datetime.datetime.now(), order_request.order_type.value
+                    datetime.datetime.now()
                 ))
                 
                 # Update cash balance
@@ -146,12 +142,12 @@ class OrderManager:
                 
                 # Insert trade record
                 trade_query = """
-                    INSERT INTO trades (stock_symbol, trade_type, price_at_trade, quantity, trade_date, realized_pnl, order_type)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO trades (stock_symbol, trade_type, price_at_trade, quantity, trade_date, realized_pnl)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                 """
                 cursor.execute(trade_query, (
                     order_request.symbol, 'SELL', price, order_request.quantity, 
-                    datetime.datetime.now(), result['realized_pnl'], order_request.order_type.value
+                    datetime.datetime.now(), result['realized_pnl']
                 ))
                 
                 # Update cash balance
@@ -317,232 +313,3 @@ class OrderManager:
                 INSERT INTO holdings (stock_symbol, quantity, average_cost)
                 VALUES (%s, %s, %s)
             """, (symbol, quantity, price))
-
-    @staticmethod
-    def _save_pending_order(order_request: OrderRequest) -> Dict:
-        """Save order to pending orders table"""
-        try:
-            db = get_db_connection()
-            if not db:
-                return {"error": "Database connection failed"}
-            
-            cursor = db.cursor(dictionary=True)
-            
-            # Insert pending order
-            order_data = order_request.to_dict()
-            order_data['status'] = OrderStatus.PENDING.value
-            
-            columns = ', '.join(order_data.keys())
-            placeholders = ', '.join(['%s'] * len(order_data))
-            
-            query = f"""
-                INSERT INTO orders ({columns})
-                VALUES ({placeholders})
-            """
-            
-            cursor.execute(query, list(order_data.values()))
-            order_id = cursor.lastrowid
-            
-            db.commit()
-            cursor.close()
-            db.close()
-            
-            return {
-                "success": True,
-                "order_id": order_id,
-                "message": f"{order_request.order_type.value} order placed successfully",
-                "status": "PENDING"
-            }
-            
-        except Exception as e:
-            return {"error": f"Failed to save pending order: {str(e)}"}
-
-    @staticmethod
-    def get_pending_orders(user_id: str = 'default_user', symbol: str = None) -> List[Dict]:
-        """Get pending orders for a user"""
-        try:
-            db = get_db_connection()
-            if not db:
-                return []
-            
-            cursor = db.cursor(dictionary=True)
-            
-            if symbol:
-                cursor.execute("""
-                    SELECT * FROM orders 
-                    WHERE user_id = %s AND stock_symbol = %s AND status = 'PENDING'
-                    ORDER BY created_at DESC
-                """, (user_id, symbol.upper()))
-            else:
-                cursor.execute("""
-                    SELECT * FROM orders 
-                    WHERE user_id = %s AND status = 'PENDING'
-                    ORDER BY created_at DESC
-                """, (user_id,))
-            
-            orders = cursor.fetchall()
-            cursor.close()
-            db.close()
-            
-            return orders
-            
-        except Exception as e:
-            print(f"Error getting pending orders: {e}")
-            return []
-
-    @staticmethod
-    def cancel_order(order_id: int, user_id: str = 'default_user') -> Dict:
-        """Cancel a pending order"""
-        try:
-            db = get_db_connection()
-            if not db:
-                return {"error": "Database connection failed"}
-            
-            cursor = db.cursor(dictionary=True)
-            
-            # Check if order exists and belongs to user
-            cursor.execute("""
-                SELECT * FROM orders 
-                WHERE order_id = %s AND user_id = %s AND status = 'PENDING'
-            """, (order_id, user_id))
-            
-            order = cursor.fetchone()
-            if not order:
-                cursor.close()
-                db.close()
-                return {"error": "Order not found or cannot be cancelled"}
-            
-            # Update order status
-            cursor.execute("""
-                UPDATE orders SET status = 'CANCELLED' 
-                WHERE order_id = %s
-            """, (order_id,))
-            
-            db.commit()
-            cursor.close()
-            db.close()
-            
-            return {
-                "success": True,
-                "message": f"Order {order_id} cancelled successfully"
-            }
-            
-        except Exception as e:
-            return {"error": f"Failed to cancel order: {str(e)}"}
-
-    @staticmethod
-    def check_and_execute_pending_orders():
-        """Check pending orders and execute if conditions are met"""
-        try:
-            db = get_db_connection()
-            if not db:
-                return
-            
-            cursor = db.cursor(dictionary=True)
-            
-            # Get all pending orders
-            cursor.execute("""
-                SELECT * FROM orders 
-                WHERE status = 'PENDING'
-                ORDER BY created_at ASC
-            """)
-            
-            pending_orders = cursor.fetchall()
-            cursor.close()
-            db.close()
-            
-            for order_data in pending_orders:
-                OrderManager._check_order_execution(order_data)
-                
-        except Exception as e:
-            print(f"Error checking pending orders: {e}")
-
-    @staticmethod
-    def _check_order_execution(order_data: Dict):
-        """Check if a specific order should be executed"""
-        try:
-            symbol = order_data['stock_symbol']
-            order_type = order_data['order_type']
-            
-            # Get current price
-            price_data = get_current_price(symbol)
-            if 'error' in price_data:
-                return
-            
-            current_price = price_data['current_price']
-            should_execute = False
-            
-            if order_type == 'LIMIT':
-                if order_data['side'] == 'BUY' and current_price <= order_data['price']:
-                    should_execute = True
-                elif order_data['side'] == 'SELL' and current_price >= order_data['price']:
-                    should_execute = True
-            
-            elif order_type == 'STOP':
-                if order_data['side'] == 'BUY' and current_price >= order_data['stop_price']:
-                    should_execute = True
-                elif order_data['side'] == 'SELL' and current_price <= order_data['stop_price']:
-                    should_execute = True
-            
-            elif order_type == 'STOP_LIMIT':
-                # Check if stop price is triggered
-                stop_triggered = False
-                if order_data['side'] == 'BUY' and current_price >= order_data['stop_price']:
-                    stop_triggered = True
-                elif order_data['side'] == 'SELL' and current_price <= order_data['stop_price']:
-                    stop_triggered = True
-                
-                if stop_triggered:
-                    # Convert to limit order and check if limit price is acceptable
-                    if order_data['side'] == 'BUY' and current_price <= order_data['limit_price']:
-                        should_execute = True
-                    elif order_data['side'] == 'SELL' and current_price >= order_data['limit_price']:
-                        should_execute = True
-            
-            if should_execute:
-                OrderManager._execute_pending_order(order_data, current_price)
-                
-        except Exception as e:
-            print(f"Error checking order execution for order {order_data.get('order_id')}: {e}")
-
-    @staticmethod
-    def _execute_pending_order(order_data: Dict, execution_price: float):
-        """Execute a pending order"""
-        try:
-            # Create order request from stored data
-            order_request = OrderRequest(
-                symbol=order_data['stock_symbol'],
-                side=OrderSide(order_data['side']),
-                quantity=int(order_data['quantity']),
-                order_type=OrderType(order_data['order_type']),
-                price=order_data['price'],
-                stop_price=order_data['stop_price'],
-                limit_price=order_data['limit_price'],
-                user_id=order_data['user_id']
-            )
-            
-            # Execute the order
-            if order_request.side == OrderSide.BUY:
-                result = OrderManager._execute_buy_order(order_request, execution_price)
-            else:
-                result = OrderManager._execute_sell_order(order_request, execution_price)
-            
-            if result.get('success'):
-                # Update order status to FILLED
-                db = get_db_connection()
-                if db:
-                    cursor = db.cursor()
-                    cursor.execute("""
-                        UPDATE orders 
-                        SET status = 'FILLED', filled_at = %s, filled_price = %s, filled_quantity = %s
-                        WHERE order_id = %s
-                    """, (datetime.datetime.now(), execution_price, order_data['quantity'], order_data['order_id']))
-                    
-                    db.commit()
-                    cursor.close()
-                    db.close()
-                    
-                    print(f"Order {order_data['order_id']} executed successfully at ${execution_price:.2f}")
-            
-        except Exception as e:
-            print(f"Error executing pending order {order_data.get('order_id')}: {e}")
