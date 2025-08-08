@@ -15,7 +15,7 @@ function Navigation() {
   return (
     <header className="header">
       <div className="container">
-        <h1>Portfolio Manager</h1>
+        <h1>Wealthie</h1>
         <nav className="nav">
           <ul className="nav-list">
             <li>
