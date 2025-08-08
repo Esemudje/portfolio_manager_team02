@@ -8,7 +8,12 @@ CREATE TABLE nasdaq_companies (
   Name   VARCHAR(255) NOT NULL,
   Sector VARCHAR(128),
   MarketCap BIGINT,
-  PRIMARY KEY (Symbol)
+  PRIMARY KEY (Symbol),
+  INDEX idx_sector (Sector),
+  INDEX idx_marketcap (MarketCap),
+  INDEX idx_name (Name),
+  INDEX idx_sector_marketcap (Sector, MarketCap),
+  FULLTEXT idx_name_search (Name)
 );
 
 INSERT INTO nasdaq_companies (Symbol, Name, Sector, MarketCap) VALUES

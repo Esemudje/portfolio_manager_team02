@@ -20,7 +20,6 @@ const Dashboard = () => {
     const savedWatchlist = localStorage.getItem('portfolioWatchlist');
     return savedWatchlist ? JSON.parse(savedWatchlist) : ['AAPL', 'GOOGL', 'AMZN', 'TSLA', 'MSFT'];
   });
-  const [newStockSymbol, setNewStockSymbol] = useState('');
   const [stockQuotes, setStockQuotes] = useState({});
   const [marketNews, setMarketNews] = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -78,7 +77,6 @@ const Dashboard = () => {
         const updatedWatchlist = [...watchlist, upperSymbol];
         setWatchlist(updatedWatchlist);
         localStorage.setItem('portfolioWatchlist', JSON.stringify(updatedWatchlist));
-        setNewStockSymbol('');
         setError(null);
         
         // Fetch quote for the new stock
@@ -110,11 +108,6 @@ const Dashboard = () => {
       delete newQuotes[symbol];
       return newQuotes;
     });
-  };
-
-  const handleAddStockSubmit = (e) => {
-    e.preventDefault();
-    addToWatchlist(newStockSymbol);
   };
 
 

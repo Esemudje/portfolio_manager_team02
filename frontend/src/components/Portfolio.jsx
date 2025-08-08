@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import apiService from '../services/apiService';
@@ -21,9 +21,104 @@ const Portfolio = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Normalize trade from API into UI-friendly shape
+  const mapTrade = useCallback((trade) => ({
+    id: trade.trade_id,
+    symbol: trade.stock_symbol,
+    type: trade.trade_type,
+    quantity: Number(trade.quantity || 0),
+    price: Number(trade.price_at_trade || 0),
+    date: trade.trade_date,
+    total: Number(trade.quantity || 0) * Number(trade.price_at_trade || 0)
+  }), []);
+
+  const fetchPortfolioData = useCallback(async (isPolling = false) => {
+    try {
+      // Only show loading spinner if not polling (initial load or manual refresh)
+      if (!isPolling) {
+        setLoading(true);
+      }
+      setError(null);
+      
+      // Fetch real data from database - this already includes calculated P&L and current prices
+      // No additional API calls needed as backend provides comprehensive portfolio data
+      const [portfolioResponse, tradesResponse, cashResponse, comprehensivePnLResponse] = await Promise.allSettled([
+        apiService.getPortfolio(),
+        apiService.getTrades(),
+        apiService.getBalance(),
+        apiService.getComprehensivePnL()
+      ]);
+
+      // Process portfolio holdings - all data comes from database with pre-calculated values
+      let holdings = [];
+      let totalValue = 0;
+      
+      if (portfolioResponse.status === 'fulfilled' && portfolioResponse.value.holdings) {
+        holdings = portfolioResponse.value.holdings.map(holding => ({
+          symbol: holding.stock_symbol || holding.symbol, // Handle both formats
+          name: `${holding.stock_symbol || holding.symbol} Inc.`, // Could be enhanced with company names from database
+          quantity: parseFloat(holding.quantity),
+          averageCost: parseFloat(holding.average_cost),
+          currentPrice: parseFloat(holding.current_price || holding.average_cost), // From database cache
+          marketValue: parseFloat(holding.market_value || 0), // Pre-calculated by backend
+          costBasis: parseFloat(holding.cost_basis || 0), // Pre-calculated by backend  
+          unrealizedPnl: parseFloat(holding.unrealized_pnl || 0) // Pre-calculated by backend
+        }));
+        
+        if (portfolioResponse.value.summary) {
+          totalValue = portfolioResponse.value.summary.total_portfolio_value || 0;
+        }
+      }
+
+      // Process trades - all from database, no API calls needed
+      let trades = [];
+      if (tradesResponse.status === 'fulfilled' && tradesResponse.value.trades) {
+        trades = tradesResponse.value.trades.map(mapTrade);
+      }
+
+      // Get current cash balance
+      let cashBalance = 10000; // Default fallback
+      if (cashResponse.status === 'fulfilled' && cashResponse.value.cash_balance !== undefined) {
+        cashBalance = parseFloat(cashResponse.value.cash_balance);
+      }
+
+      // Process comprehensive P&L data
+      let comprehensivePnLData = {
+        realizedPnL: 0,
+        unrealizedPnL: 0,
+        totalPnL: 0
+      };
+      
+      if (comprehensivePnLResponse.status === 'fulfilled' && comprehensivePnLResponse.value) {
+        const pnlData = comprehensivePnLResponse.value;
+        comprehensivePnLData = {
+          realizedPnL: parseFloat(pnlData.summary?.realized_pnl || 0),
+          unrealizedPnL: parseFloat(pnlData.summary?.unrealized_pnl || 0),
+          totalPnL: parseFloat(pnlData.summary?.total_pnl || 0)
+        };
+        setComprehensivePnL(comprehensivePnLData);
+      }
+
+      // Portfolio data is already calculated by backend with current market prices
+      setPortfolioData({
+        totalValue,
+        totalCash: cashBalance,
+        totalPL: comprehensivePnLData.totalPnL, // Use consistent P&L source
+        holdings,
+        trades
+      });
+      
+    } catch (err) {
+      setError('Failed to fetch portfolio data');
+      console.error('Portfolio error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [mapTrade]);
+
   useEffect(() => {
     fetchPortfolioData();
-  }, []);
+  }, [fetchPortfolioData]);
 
   // Add polling for real-time updates (numbers only, no UI disruption)
   useEffect(() => {
@@ -34,7 +129,6 @@ const Portfolio = () => {
       setIsPolling(true);
       
       try {
-        // Fetch only the essential data without triggering loading state
         const [portfolioResponse, tradesResponse, cashResponse, comprehensivePnLResponse] = await Promise.allSettled([
           apiService.getPortfolio(),
           apiService.getTrades(),
@@ -53,7 +147,7 @@ const Portfolio = () => {
           if (data.holdings && Array.isArray(data.holdings)) {
             holdings = data.holdings.map(holding => ({
               symbol: holding.symbol || holding.stock_symbol, // Handle both formats
-              companyName: holding.company_name || holding.symbol || holding.stock_symbol,
+              name: `${holding.stock_symbol || holding.symbol} Inc.`, // Consistent with initial fetch
               quantity: parseFloat(holding.quantity || 0),
               averageCost: parseFloat(holding.average_cost || 0),
               currentPrice: parseFloat(holding.current_price || 0),
@@ -73,7 +167,8 @@ const Portfolio = () => {
         }
 
         if (tradesResponse.status === 'fulfilled' && tradesResponse.value?.trades) {
-          trades = tradesResponse.value.trades;
+          // Normalize trades during polling as well
+          trades = tradesResponse.value.trades.map(mapTrade);
         }
 
         let cashBalance = 10000;
@@ -91,9 +186,9 @@ const Portfolio = () => {
         if (comprehensivePnLResponse.status === 'fulfilled' && comprehensivePnLResponse.value?.summary) {
           const summary = comprehensivePnLResponse.value.summary;
           comprehensivePnLData = {
-            realizedPnL: parseFloat(summary.total_realized_pnl || 0),
-            unrealizedPnL: parseFloat(summary.total_unrealized_pnl || 0),
-            totalPnL: parseFloat((summary.total_realized_pnl || 0)) + parseFloat((summary.total_unrealized_pnl || 0))
+            realizedPnL: parseFloat(summary.realized_pnl || 0),
+            unrealizedPnL: parseFloat(summary.unrealized_pnl || 0),
+            totalPnL: parseFloat(summary.total_pnl || 0)
           };
         }
 
@@ -118,94 +213,7 @@ const Portfolio = () => {
     return () => {
       clearInterval(intervalId);
     };
-  }, []);
-
-  const fetchPortfolioData = async (isPolling = false) => {
-    try {
-      // Only show loading spinner if not polling (initial load or manual refresh)
-      if (!isPolling) {
-        setLoading(true);
-      }
-      setError(null);
-      
-      // Fetch real data from database - this already includes calculated P&L and current prices
-      // No additional API calls needed as backend provides comprehensive portfolio data
-      const [portfolioResponse, tradesResponse, cashResponse, comprehensivePnLResponse] = await Promise.allSettled([
-        apiService.getPortfolio(),
-        apiService.getTrades(),
-        apiService.getBalance(),
-        apiService.getComprehensivePnL()
-      ]);
-
-      // Process portfolio holdings - all data comes from database with pre-calculated values
-      let holdings = [];
-      let totalValue = 0;
-      let totalPL = 0;
-      
-      if (portfolioResponse.status === 'fulfilled' && portfolioResponse.value.holdings) {
-        holdings = portfolioResponse.value.holdings.map(holding => ({
-          symbol: holding.stock_symbol || holding.symbol, // Handle both formats
-          name: `${holding.stock_symbol || holding.symbol} Inc.`, // Could be enhanced with company names from database
-          quantity: parseFloat(holding.quantity),
-          averageCost: parseFloat(holding.average_cost),
-          currentPrice: parseFloat(holding.current_price || holding.average_cost), // From database cache
-          marketValue: parseFloat(holding.market_value || 0), // Pre-calculated by backend
-          costBasis: parseFloat(holding.cost_basis || 0), // Pre-calculated by backend  
-          unrealizedPnl: parseFloat(holding.unrealized_pnl || 0) // Pre-calculated by backend
-        }));
-        
-        if (portfolioResponse.value.summary) {
-          totalValue = portfolioResponse.value.summary.total_portfolio_value || 0;
-          totalPL = portfolioResponse.value.summary.total_pnl || 0;
-        }
-      }
-
-      // Process trades - all from database, no API calls needed
-      let trades = [];
-      if (tradesResponse.status === 'fulfilled' && tradesResponse.value.trades) {
-        trades = tradesResponse.value.trades.map(trade => ({
-          id: trade.trade_id,
-          symbol: trade.stock_symbol,
-          type: trade.trade_type,
-          quantity: parseFloat(trade.quantity),
-          price: parseFloat(trade.price_at_trade),
-          date: trade.trade_date,
-          total: parseFloat(trade.quantity) * parseFloat(trade.price_at_trade)
-        }));
-      }
-
-      // Get current cash balance
-      let cashBalance = 10000; // Default fallback
-      if (cashResponse.status === 'fulfilled' && cashResponse.value.cash_balance !== undefined) {
-        cashBalance = parseFloat(cashResponse.value.cash_balance);
-      }
-
-      // Process comprehensive P&L data
-      if (comprehensivePnLResponse.status === 'fulfilled' && comprehensivePnLResponse.value) {
-        const pnlData = comprehensivePnLResponse.value;
-        setComprehensivePnL({
-          realizedPnL: parseFloat(pnlData.summary?.realized_pnl || 0),
-          unrealizedPnL: parseFloat(pnlData.summary?.unrealized_pnl || 0),
-          totalPnL: parseFloat(pnlData.summary?.total_pnl || 0)
-        });
-      }
-
-      // Portfolio data is already calculated by backend with current market prices
-      setPortfolioData({
-        totalValue,
-        totalCash: cashBalance,
-        totalPL,
-        holdings,
-        trades
-      });
-      
-    } catch (err) {
-      setError('Failed to fetch portfolio data');
-      console.error('Portfolio error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [mapTrade]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -214,12 +222,22 @@ const Portfolio = () => {
     }).format(amount);
   };
 
+  // Robust date parsing for non-ISO strings like 'YYYY-MM-DD HH:mm:ss'
+  const parseDateSafe = (dateString) => {
+    if (!dateString) return null;
+    const direct = new Date(dateString);
+    if (!isNaN(direct.getTime())) return direct;
+    const iso = new Date((dateString || '').replace(' ', 'T'));
+    if (!isNaN(iso.getTime())) return iso;
+    const isoZ = new Date(((dateString || '').replace(' ', 'T')) + 'Z');
+    if (!isNaN(isoZ.getTime())) return isoZ;
+    return null;
+  };
+
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    const d = parseDateSafe(dateString);
+    if (!d) return '—';
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   // Prepare data for charts using database values

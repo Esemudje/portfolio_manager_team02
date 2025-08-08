@@ -54,17 +54,6 @@ A comprehensive portfolio management application built for tracking investments,
 | Market Data | yFinance              | Retrieve open, close, and news data for stocks                    |
 | Search Data | NASDAQ Companies DB   | Enhanced search with 6000+ companies, sectors, and market caps    |
 
-## Quick Start with Docker (Coming Soon)
-
-```bash
-# Clone the repository
-git clone https://github.com/your‑team/portfolio‑manager.git
-cd portfolio‑manager
-
-# Start everything (backend, frontend, and database)
-docker compose up
-```
-
 ### Manual Setup
 
 #### Backend Setup

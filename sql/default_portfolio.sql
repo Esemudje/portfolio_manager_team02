@@ -27,22 +27,29 @@ CREATE TABLE IF NOT EXISTS holdings (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_symbol (stock_symbol),
+    INDEX idx_quantity (quantity),
     UNIQUE KEY unique_holding (stock_symbol)
 );
 
--- Trades table to track all buy/sell transactions
+-- Trades table to record all transactions
 CREATE TABLE IF NOT EXISTS trades (
-    trade_id INT PRIMARY KEY AUTO_INCREMENT,
+    trade_id INT AUTO_INCREMENT PRIMARY KEY,
     stock_symbol VARCHAR(50) NOT NULL,
-    trade_type ENUM('BUY', 'SELL') NOT NULL,
-    price_at_trade DECIMAL(10, 2) NOT NULL,
+    trade_type ENUM('BUY','SELL') NOT NULL,
     quantity DECIMAL(10, 2) NOT NULL,
-    trade_date DATETIME NOT NULL,
-    realized_pnl DECIMAL(10, 2) DEFAULT NULL, -- Only for SELL trades
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    price_at_trade DECIMAL(10, 2) NOT NULL,
+    trade_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    realized_pnl DECIMAL(10, 2) NULL,
+    order_id INT NULL,
+    order_type ENUM('MARKET', 'LIMIT', 'STOP', 'STOP_LIMIT') DEFAULT 'MARKET',
+    
+    -- Indexes for performance
     INDEX idx_symbol (stock_symbol),
+    INDEX idx_type (trade_type),
     INDEX idx_date (trade_date),
-    INDEX idx_type (trade_type)
+    INDEX idx_symbol_date (stock_symbol, trade_date),
+    INDEX idx_order_id (order_id),
+    INDEX idx_composite_filter (stock_symbol, trade_type, trade_date)
 );
 
 -- User cash balance table
