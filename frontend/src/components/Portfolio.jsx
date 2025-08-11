@@ -320,11 +320,11 @@ const Portfolio = () => {
           </div>
           <div className="stat-label">Total P&L</div>
           <div style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
-            <div style={{ color: comprehensivePnL.realizedPnL >= 0 ? '#10b981' : '#ef4444' }}>
-              Realized: {formatCurrency(comprehensivePnL.realizedPnL)}
-            </div>
             <div style={{ color: comprehensivePnL.unrealizedPnL >= 0 ? '#10b981' : '#ef4444' }}>
               Unrealized: {formatCurrency(comprehensivePnL.unrealizedPnL)}
+            </div>
+            <div style={{ color: comprehensivePnL.realizedPnL >= 0 ? '#10b981' : '#ef4444' }}>
+              Realized: {formatCurrency(comprehensivePnL.realizedPnL)}
             </div>
           </div>
         </div>
