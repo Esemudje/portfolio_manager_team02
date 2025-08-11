@@ -319,9 +319,13 @@ const Portfolio = () => {
             {formatCurrency(comprehensivePnL.totalPnL)}
           </div>
           <div className="stat-label">Total P&L</div>
-          <div style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '0.5rem' }}>
-            <div>Realized: {formatCurrency(comprehensivePnL.realizedPnL)}</div>
-            <div>Unrealized: {formatCurrency(comprehensivePnL.unrealizedPnL)}</div>
+          <div style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+            <div style={{ color: comprehensivePnL.realizedPnL >= 0 ? '#10b981' : '#ef4444' }}>
+              Realized: {formatCurrency(comprehensivePnL.realizedPnL)}
+            </div>
+            <div style={{ color: comprehensivePnL.unrealizedPnL >= 0 ? '#10b981' : '#ef4444' }}>
+              Unrealized: {formatCurrency(comprehensivePnL.unrealizedPnL)}
+            </div>
           </div>
         </div>
       </div>
