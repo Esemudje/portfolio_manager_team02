@@ -1,6 +1,6 @@
 # Portfolio Manager
 
-A comprehensive portfolio management application built for tracking investments, trading stocks, and analyzing performance.
+Wealthie is a comprehensive portfolio management application built for tracking investments, trading stocks, and analyzing performance.
 
 ## Features
 
@@ -21,7 +21,7 @@ A comprehensive portfolio management application built for tracking investments,
 
 ### 💹 **Trading Interface**
 
-- **Market Orders**: Buy/sell immediately at current market price
+- **Market Orders**: Buy/sell immediately at the current market price
 - **Real-time Order Execution**: Orders execute instantly at market price
 - **Order Validation**: Comprehensive validation and error handling
 - **Simple UI**: Clean interface focused on market order execution
@@ -31,7 +31,7 @@ A comprehensive portfolio management application built for tracking investments,
 - Enhanced watchlist with smart stock search
 - Add stocks by searching company names instead of just symbols
 - Real-time price updates for watched stocks
-- Easy removal of stocks from watchlist
+- Easy removal of stocks from the watchlist
 
 ### 📰 **Market News**
 
@@ -43,7 +43,7 @@ A comprehensive portfolio management application built for tracking investments,
 
 | Component   | Technology            | Purpose                                                           |
 | ----------- | --------------------- | ----------------------------------------------------------------- |
-| Front‑end   | React with Javascript | Build the user interface and handle page routing                  |
+| Front‑end   | React with JavaScript | Build the user interface and handle page routing                  |
 | Back‑end    | Flask (Python)        | Provide REST endpoints for authentication, trading, and analytics |
 | Data Store  | MySQL                 | Persist user accounts, trades, and historic profit & loss         |
 | Market Data | yFinance              | Retrieve open, close, and news data for stocks                    |
@@ -128,7 +128,7 @@ The frontend will automatically proxy API requests to the Flask backend running 
 
 | Layer       | Tooling                  | Purpose                                                           |
 | ----------- | ------------------------ | ----------------------------------------------------------------- |
-| Front‑end   | React with Javascript    | Build the user interface and handle page routing                  |
+| Front‑end   | React with JavaScript    | Build the user interface and handle page routing                  |
 | Back‑end    | Flask (Python)           | Provide REST endpoints for authentication, trading, and analytics |
 | Data Store  | MySQL                    | Persist user accounts, trades, and historic profit & loss         |
 | Market Data | yFinance or AlphaVantage | Retrieve open, close, and news data for stocks                    |
